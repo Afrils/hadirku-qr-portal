@@ -1,5 +1,4 @@
-
-import { Student, Teacher, Subject, Schedule, Attendance } from '../types/dataTypes';
+import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
 
 // Mock data for initial state
 const initialStudents: Student[] = [
@@ -9,6 +8,7 @@ const initialStudents: Student[] = [
     studentId: 'S001',
     class: 'XII IPA 1',
     email: 'ahmad.farizi@example.com',
+    password: '123456',
   },
   {
     id: '2',
@@ -16,6 +16,7 @@ const initialStudents: Student[] = [
     studentId: 'S002',
     class: 'XII IPA 1',
     email: 'diah.p@example.com',
+    password: '123456',
   },
   {
     id: '3',
@@ -23,6 +24,7 @@ const initialStudents: Student[] = [
     studentId: 'S003',
     class: 'XII IPS 2',
     email: 'budi.santoso@example.com',
+    password: '123456',
   },
 ];
 
@@ -33,6 +35,7 @@ const initialTeachers: Teacher[] = [
     teacherId: 'T001',
     email: 'siti.rahayu@example.com',
     subjects: ['Matematika', 'Fisika'],
+    password: '123456',
   },
   {
     id: '2',
@@ -40,7 +43,42 @@ const initialTeachers: Teacher[] = [
     teacherId: 'T002',
     email: 'bambang.w@example.com',
     subjects: ['Kimia'],
+    password: '123456',
   },
+];
+
+const initialAdmins: Admin[] = [
+  {
+    id: '1',
+    name: 'Admin Utama',
+    email: 'admin@example.com',
+    password: 'admin123',
+  }
+];
+
+// Combine all users for authentication
+const initialUsers: User[] = [
+  ...initialStudents.map(student => ({
+    id: `student-${student.id}`,
+    email: student.email,
+    name: student.name,
+    role: 'student' as const,
+    roleId: student.id
+  })),
+  ...initialTeachers.map(teacher => ({
+    id: `teacher-${teacher.id}`,
+    email: teacher.email,
+    name: teacher.name,
+    role: 'teacher' as const,
+    roleId: teacher.id
+  })),
+  ...initialAdmins.map(admin => ({
+    id: `admin-${admin.id}`,
+    email: admin.email,
+    name: admin.name,
+    role: 'admin' as const,
+    roleId: admin.id
+  }))
 ];
 
 const initialSubjects: Subject[] = [
@@ -110,9 +148,12 @@ const initialAttendances: Attendance[] = [
 const STORAGE_KEYS = {
   STUDENTS: 'attendance_students',
   TEACHERS: 'attendance_teachers',
+  ADMINS: 'attendance_admins',
+  USERS: 'attendance_users',
   SUBJECTS: 'attendance_subjects',
   SCHEDULES: 'attendance_schedules',
   ATTENDANCES: 'attendance_records',
+  CURRENT_USER: 'attendance_current_user',
 };
 
 // Helper functions to interact with localStorage
@@ -141,6 +182,12 @@ const initializeStorage = () => {
   }
   if (!localStorage.getItem(STORAGE_KEYS.TEACHERS)) {
     setItem(STORAGE_KEYS.TEACHERS, initialTeachers);
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.ADMINS)) {
+    setItem(STORAGE_KEYS.ADMINS, initialAdmins);
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+    setItem(STORAGE_KEYS.USERS, initialUsers);
   }
   if (!localStorage.getItem(STORAGE_KEYS.SUBJECTS)) {
     setItem(STORAGE_KEYS.SUBJECTS, initialSubjects);
@@ -193,6 +240,44 @@ const remove = (storageKey: string, id: string): void => {
   setItem(storageKey, filteredItems);
 };
 
+// Authentication functions
+const authenticateUser = (email: string, password: string): User | null => {
+  const users = getAll<User>(STORAGE_KEYS.USERS);
+  const user = users.find(u => u.email === email);
+  
+  if (!user) return null;
+  
+  // Check password based on role
+  let isValid = false;
+  if (user.role === 'student') {
+    const student = getById<Student>(STORAGE_KEYS.STUDENTS, user.roleId);
+    isValid = student?.password === password;
+  } else if (user.role === 'teacher') {
+    const teacher = getById<Teacher>(STORAGE_KEYS.TEACHERS, user.roleId);
+    isValid = teacher?.password === password;
+  } else if (user.role === 'admin') {
+    const admin = getById<Admin>(STORAGE_KEYS.ADMINS, user.roleId);
+    isValid = admin?.password === password;
+  }
+  
+  if (isValid) {
+    // Store current user in localStorage
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    return user;
+  }
+  
+  return null;
+};
+
+const getCurrentUser = (): User | null => {
+  const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  return userJson ? JSON.parse(userJson) : null;
+};
+
+const logoutUser = (): void => {
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+};
+
 // Specific data access methods
 export const dbService = {
   // Student operations
@@ -208,6 +293,25 @@ export const dbService = {
   createTeacher: (teacher: Omit<Teacher, 'id'>) => create<Teacher>(STORAGE_KEYS.TEACHERS, teacher),
   updateTeacher: (id: string, teacher: Omit<Teacher, 'id'>) => update<Teacher>(STORAGE_KEYS.TEACHERS, id, teacher),
   deleteTeacher: (id: string) => remove(STORAGE_KEYS.TEACHERS, id),
+  
+  // Admin operations
+  getAllAdmins: () => getAll<Admin>(STORAGE_KEYS.ADMINS),
+  getAdminById: (id: string) => getById<Admin>(STORAGE_KEYS.ADMINS, id),
+  createAdmin: (admin: Omit<Admin, 'id'>) => create<Admin>(STORAGE_KEYS.ADMINS, admin),
+  updateAdmin: (id: string, admin: Omit<Admin, 'id'>) => update<Admin>(STORAGE_KEYS.ADMINS, id, admin),
+  deleteAdmin: (id: string) => remove(STORAGE_KEYS.ADMINS, id),
+  
+  // User operations
+  getAllUsers: () => getAll<User>(STORAGE_KEYS.USERS),
+  getUserById: (id: string) => getById<User>(STORAGE_KEYS.USERS, id),
+  createUser: (user: Omit<User, 'id'>) => create<User>(STORAGE_KEYS.USERS, user),
+  updateUser: (id: string, user: Omit<User, 'id'>) => update<User>(STORAGE_KEYS.USERS, id, user),
+  deleteUser: (id: string) => remove(STORAGE_KEYS.USERS, id),
+  
+  // Authentication
+  login: authenticateUser,
+  logout: logoutUser,
+  getCurrentUser,
   
   // Subject operations
   getAllSubjects: () => getAll<Subject>(STORAGE_KEYS.SUBJECTS),
@@ -246,10 +350,31 @@ export const dbService = {
     return attendances.filter(a => a.date === date);
   },
   
+  // Report generation and export
+  getAttendanceReport: (startDate: string, endDate: string, subjectId?: string, studentId?: string) => {
+    const attendances = getAll<Attendance>(STORAGE_KEYS.ATTENDANCES);
+    let filteredAttendances = attendances.filter(a => {
+      const date = a.date;
+      return date >= startDate && date <= endDate;
+    });
+    
+    if (subjectId) {
+      filteredAttendances = filteredAttendances.filter(a => a.subjectId === subjectId);
+    }
+    
+    if (studentId) {
+      filteredAttendances = filteredAttendances.filter(a => a.studentId === studentId);
+    }
+    
+    return filteredAttendances;
+  },
+  
   // Reset data (for testing)
   resetData: () => {
     setItem(STORAGE_KEYS.STUDENTS, initialStudents);
     setItem(STORAGE_KEYS.TEACHERS, initialTeachers);
+    setItem(STORAGE_KEYS.ADMINS, initialAdmins);
+    setItem(STORAGE_KEYS.USERS, initialUsers);
     setItem(STORAGE_KEYS.SUBJECTS, initialSubjects);
     setItem(STORAGE_KEYS.SCHEDULES, initialSchedules);
     setItem(STORAGE_KEYS.ATTENDANCES, initialAttendances);

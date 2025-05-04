@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
@@ -11,8 +11,10 @@ import {
   Book, 
   Calendar, 
   QrCode,
-  LogOut 
+  LogOut,
+  FileSpreadsheet
 } from 'lucide-react';
+import { useAppContext } from '@/contexts/AppContext';
 
 type NavItemProps = {
   to: string;
@@ -20,9 +22,12 @@ type NavItemProps = {
   label: string;
   isActive: boolean;
   isSidebarExpanded: boolean;
+  isVisible?: boolean;
 };
 
-const NavItem = ({ to, icon: Icon, label, isActive, isSidebarExpanded }: NavItemProps) => {
+const NavItem = ({ to, icon: Icon, label, isActive, isSidebarExpanded, isVisible = true }: NavItemProps) => {
+  if (!isVisible) return null;
+  
   return (
     <Link
       to={to}
@@ -42,18 +47,30 @@ const NavItem = ({ to, icon: Icon, label, isActive, isSidebarExpanded }: NavItem
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, currentUser } = useAppContext();
 
   const toggleSidebar = () => {
     setIsSidebarExpanded(!isSidebarExpanded);
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Get user role for conditional rendering
+  const role = currentUser?.role || '';
+
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
-    { path: '/students', icon: Users, label: 'Siswa' },
-    { path: '/teachers', icon: User, label: 'Guru' },
-    { path: '/subjects', icon: Book, label: 'Mata Pelajaran' },
-    { path: '/schedules', icon: Calendar, label: 'Jadwal' },
-    { path: '/qr-generator', icon: QrCode, label: 'QR Code' },
+    { path: '/', icon: Home, label: 'Dashboard', visible: true },
+    { path: '/students', icon: Users, label: 'Siswa', visible: role === 'admin' || role === 'teacher' },
+    { path: '/teachers', icon: User, label: 'Guru', visible: role === 'admin' },
+    { path: '/subjects', icon: Book, label: 'Mata Pelajaran', visible: role === 'admin' || role === 'teacher' },
+    { path: '/schedules', icon: Calendar, label: 'Jadwal', visible: true },
+    { path: '/qr-generator', icon: QrCode, label: 'QR Code', visible: role === 'admin' || role === 'teacher' },
+    { path: '/attendance', icon: Calendar, label: 'Presensi', visible: true },
+    { path: '/reports', icon: FileSpreadsheet, label: 'Laporan', visible: true },
   ];
 
   return (
@@ -80,6 +97,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <Menu className="h-5 w-5" />
           </Button>
         </div>
+        
+        {/* User info */}
+        {currentUser && isSidebarExpanded && (
+          <div className="p-4 border-b border-sidebar-border">
+            <p className="font-medium text-sidebar-foreground">{currentUser.name}</p>
+            <p className="text-xs text-sidebar-muted-foreground capitalize">{currentUser.role}</p>
+          </div>
+        )}
+        
         <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => (
             <NavItem
@@ -89,6 +115,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               label={item.label}
               isActive={location.pathname === item.path}
               isSidebarExpanded={isSidebarExpanded}
+              isVisible={item.visible}
             />
           ))}
         </nav>
@@ -99,6 +126,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               !isSidebarExpanded && "justify-center"
             )}
+            onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 mr-2" />
             {isSidebarExpanded && "Keluar"}
@@ -108,10 +136,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Main content */}
       <main className="flex-1">
-        <div className="h-16 border-b px-6 flex items-center bg-white shadow-sm">
+        <div className="h-16 border-b px-6 flex items-center justify-between bg-white shadow-sm">
           <h1 className="text-lg font-medium">
             {navItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
           </h1>
+          {currentUser && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-2">
+                {currentUser.name} ({currentUser.role})
+              </span>
+            </div>
+          )}
         </div>
         <div className="p-6">{children}</div>
       </main>

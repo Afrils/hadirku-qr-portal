@@ -5,6 +5,7 @@ export type Student = {
   studentId: string;
   class: string;
   email: string;
+  password?: string; // For authentication
 };
 
 export type Teacher = {
@@ -13,6 +14,24 @@ export type Teacher = {
   teacherId: string;
   email: string;
   subjects: string[];
+  password?: string; // For authentication
+};
+
+export type Admin = {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+};
+
+export type UserRole = 'student' | 'teacher' | 'admin';
+
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  roleId: string; // References the ID in the role-specific table
 };
 
 export type Subject = {

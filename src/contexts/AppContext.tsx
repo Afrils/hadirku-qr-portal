@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/sonner';
-import { Student, Teacher, Subject, Schedule } from '../types/dataTypes';
+import { Student, Teacher, Subject, Schedule, User } from '../types/dataTypes';
 import { dbService } from '../services/dbService';
 
 type AppContextType = {
@@ -9,6 +9,10 @@ type AppContextType = {
   teachers: Teacher[];
   subjects: Subject[];
   schedules: Schedule[];
+  currentUser: User | null;
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+  isAuthenticated: boolean;
   addStudent: (student: Omit<Student, 'id'>) => void;
   updateStudent: (id: string, student: Omit<Student, 'id'>) => void;
   deleteStudent: (id: string) => void;
@@ -33,6 +37,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!dbService.getCurrentUser());
+
+  // Authentication functions
+  const login = (email: string, password: string): boolean => {
+    const user = dbService.login(email, password);
+    if (user) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      toast.success(`Selamat datang, ${user.name}`);
+      return true;
+    } else {
+      toast.error('Login gagal. Email atau password tidak valid.');
+      return false;
+    }
+  };
+
+  const logout = () => {
+    dbService.logout();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    toast.success('Anda telah keluar dari sistem.');
+  };
 
   // Load initial data
   const loadData = () => {
@@ -144,6 +171,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         teachers,
         subjects,
         schedules,
+        currentUser,
+        login,
+        logout,
+        isAuthenticated,
         addStudent,
         updateStudent,
         deleteStudent,
