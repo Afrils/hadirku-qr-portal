@@ -1,87 +1,124 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { dbService } from '@/services/dbService';
 import { Attendance, Student, Subject } from '@/types/dataTypes';
-import { Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { toast } from '@/components/ui/sonner';
+import { exportAttendancesToExcel } from '@/utils/exportUtils';
+import { cn } from '@/lib/utils';
 
-const Reports = () => {
-  const { students, subjects } = useAppContext();
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState('');
+const Reports: React.FC = () => {
+  const { students, subjects, refreshData } = useAppContext();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
-  
-  const handleGenerateReport = () => {
-    if (!startDate || !endDate) {
-      toast.error('Pilih rentang tanggal terlebih dahulu!');
-      return;
+  const [filteredAttendances, setFilteredAttendances] = useState<Attendance[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+
+  useEffect(() => {
+    // Load all attendance records
+    const allAttendances = dbService.getAllAttendances();
+    setAttendances(allAttendances);
+    setFilteredAttendances(allAttendances);
+  }, []);
+
+  const handleFilter = () => {
+    let filtered = [...attendances];
+    
+    if (selectedSubject) {
+      filtered = filtered.filter(a => a.subjectId === selectedSubject);
     }
     
-    const report = dbService.getAttendanceReport(
-      startDate,
-      endDate,
-      selectedSubject || undefined,
-      selectedStudent || undefined
-    );
-    
-    setAttendances(report);
-  };
-  
-  const exportToExcel = () => {
-    if (attendances.length === 0) {
-      toast.error('Tidak ada data untuk diekspor!');
-      return;
+    if (selectedStudent) {
+      filtered = filtered.filter(a => a.studentId === selectedStudent);
     }
     
-    // Transform data for export
-    const exportData = attendances.map(attendance => {
-      const student = students.find(s => s.id === attendance.studentId);
-      const subject = subjects.find(s => s.id === attendance.subjectId);
-      
-      return {
-        'Tanggal': new Date(attendance.date).toLocaleDateString('id-ID'),
-        'Waktu': new Date(attendance.timestamp).toLocaleTimeString('id-ID'),
-        'Nama Siswa': student?.name || 'Unknown',
-        'ID Siswa': student?.studentId || 'Unknown',
-        'Kelas': student?.class || 'Unknown',
-        'Mata Pelajaran': subject?.name || 'Unknown',
-        'Status': attendance.status === 'present' ? 'Hadir' : 
-                 attendance.status === 'late' ? 'Terlambat' : 'Tidak Hadir'
-      };
-    });
+    if (selectedStatus) {
+      filtered = filtered.filter(a => a.status === selectedStatus);
+    }
     
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    if (dateFrom) {
+      filtered = filtered.filter(a => new Date(a.date) >= new Date(dateFrom));
+    }
     
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+    if (dateTo) {
+      filtered = filtered.filter(a => new Date(a.date) <= new Date(dateTo));
+    }
     
-    // Generate filename
-    const fileName = `laporan-presensi-${startDate}-to-${endDate}.xlsx`;
-    
-    // Write and download
-    XLSX.writeFile(wb, fileName);
-    
-    toast.success('Laporan berhasil diekspor!');
+    setFilteredAttendances(filtered);
   };
-  
-  const formatStatusLabel = (status: string) => {
+
+  const handleReset = () => {
+    setSelectedSubject('');
+    setSelectedStudent('');
+    setSelectedStatus('');
+    setDateFrom('');
+    setDateTo('');
+    setFilteredAttendances(attendances);
+  };
+
+  const handleExport = () => {
+    const fileName = `attendance-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportAttendancesToExcel(filteredAttendances, students, subjects, fileName);
+  };
+
+  const getStatusClass = (status: string) => {
     switch (status) {
-      case 'present': return 'Hadir';
-      case 'late': return 'Terlambat';
-      case 'absent': return 'Tidak Hadir';
-      default: return status;
+      case 'present':
+        return 'bg-green-100 text-green-800';
+      case 'absent':
+        return 'bg-red-100 text-red-800';
+      case 'late':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    return new Date(timeString).toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Helper function to get student name
+  const getStudentName = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    return student ? student.name : 'Unknown Student';
+  };
+
+  // Helper function to get subject name
+  const getSubjectName = (subjectId: string) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject ? subject.name : 'Unknown Subject';
+  };
+
+  // Helper function to format status
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case 'present':
+        return 'Hadir';
+      case 'absent':
+        return 'Tidak Hadir';
+      case 'late':
+        return 'Terlambat';
+      default:
+        return status;
     }
   };
 
@@ -94,36 +131,16 @@ const Reports = () => {
           <CardTitle>Filter Laporan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Tanggal Mulai</Label>
-              <Input 
-                id="startDate" 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)} 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="endDate">Tanggal Selesai</Label>
-              <Input 
-                id="endDate" 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)} 
-              />
-            </div>
-            
+          <div className="grid md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label htmlFor="subject">Mata Pelajaran</Label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Semua mata pelajaran" />
+                  <SelectValue placeholder="Pilih mata pelajaran" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua mata pelajaran</SelectItem>
-                  {subjects.map((subject) => (
+                  <SelectItem value="">Semua Mata Pelajaran</SelectItem>
+                  {subjects.map(subject => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name}
                     </SelectItem>
@@ -136,11 +153,11 @@ const Reports = () => {
               <Label htmlFor="student">Siswa</Label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Semua siswa" />
+                  <SelectValue placeholder="Pilih siswa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua siswa</SelectItem>
-                  {students.map((student) => (
+                  <SelectItem value="">Semua Siswa</SelectItem>
+                  {students.map(student => (
                     <SelectItem key={student.id} value={student.id}>
                       {student.name}
                     </SelectItem>
@@ -148,71 +165,94 @@ const Reports = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          <div className="flex items-center justify-end gap-2">
-            <Button onClick={handleGenerateReport}>Tampilkan Laporan</Button>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">Status Presensi</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Status</SelectItem>
+                  <SelectItem value="present">Hadir</SelectItem>
+                  <SelectItem value="late">Terlambat</SelectItem>
+                  <SelectItem value="absent">Tidak Hadir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dateFrom">Dari Tanggal</Label>
+              <Input
+                id="dateFrom"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dateTo">Sampai Tanggal</Label>
+              <Input
+                id="dateTo"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-end space-x-2">
+              <Button onClick={handleFilter}>Filter</Button>
+              <Button variant="outline" onClick={handleReset}>Reset</Button>
+              <Button variant="outline" onClick={handleExport}>Export Excel</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
       
-      {attendances.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Hasil Laporan</CardTitle>
-            <Button onClick={exportToExcel} variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              <span>Ekspor Excel</span>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Waktu</TableHead>
-                  <TableHead>Nama Siswa</TableHead>
-                  <TableHead>ID Siswa</TableHead>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Mata Pelajaran</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendances.map((attendance) => {
-                  const student = students.find(s => s.id === attendance.studentId) as Student;
-                  const subject = subjects.find(s => s.id === attendance.subjectId) as Subject;
-                  
-                  return (
-                    <TableRow key={attendance.id}>
-                      <TableCell>
-                        {new Date(attendance.date).toLocaleDateString('id-ID')}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(attendance.timestamp).toLocaleTimeString('id-ID')}
-                      </TableCell>
-                      <TableCell>{student?.name || 'Unknown'}</TableCell>
-                      <TableCell>{student?.studentId || 'Unknown'}</TableCell>
-                      <TableCell>{student?.class || 'Unknown'}</TableCell>
-                      <TableCell>{subject?.name || 'Unknown'}</TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          'px-2 py-1 rounded-full text-xs',
-                          attendance.status === 'present' ? 'bg-green-100 text-green-800' :
-                          attendance.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        )}>
-                          {formatStatusLabel(attendance.status)}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Presensi</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Tanggal</th>
+                  <th className="text-left p-2">Waktu</th>
+                  <th className="text-left p-2">Siswa</th>
+                  <th className="text-left p-2">Mata Pelajaran</th>
+                  <th className="text-left p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAttendances.length > 0 ? (
+                  filteredAttendances.map((attendance) => (
+                    <tr key={attendance.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2">{formatDate(attendance.date)}</td>
+                      <td className="p-2">{formatTime(attendance.timestamp)}</td>
+                      <td className="p-2">{getStudentName(attendance.studentId)}</td>
+                      <td className="p-2">{getSubjectName(attendance.subjectId)}</td>
+                      <td className="p-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusClass(attendance.status))}>
+                          {formatStatus(attendance.status)}
                         </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-4 text-center text-gray-500">
+                      Tidak ada data presensi yang sesuai dengan filter
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

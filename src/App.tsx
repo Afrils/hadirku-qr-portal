@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./contexts/AppContext";
 import MainLayout from "./components/MainLayout";
+import { useState } from "react";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -18,8 +19,6 @@ import Attendance from "./pages/Attendance";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Reports from "./pages/Reports";
-
-const queryClient = new QueryClient();
 
 // Protected route wrapper
 const ProtectedRoute = ({ children, roles = [] }: { children: JSX.Element, roles?: string[] }) => {
@@ -119,16 +118,21 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AppProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppRoutes />
-      </TooltipProvider>
-    </AppProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Create a new QueryClient instance inside the component
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AppRoutes />
+        </TooltipProvider>
+      </AppProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
