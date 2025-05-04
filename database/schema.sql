@@ -1,0 +1,76 @@
+-- Create database if not exists
+CREATE DATABASE IF NOT EXISTS hadirku_qr;
+USE hadirku_qr;
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'teacher') NOT NULL DEFAULT 'teacher',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create students table
+CREATE TABLE IF NOT EXISTS students (
+  id VARCHAR(36) PRIMARY KEY,
+  student_id VARCHAR(20) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  class VARCHAR(20) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create teachers table
+CREATE TABLE IF NOT EXISTS teachers (
+  id VARCHAR(36) PRIMARY KEY,
+  teacher_id VARCHAR(20) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  subject_id VARCHAR(36),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL
+);
+
+-- Create subjects table
+CREATE TABLE IF NOT EXISTS subjects (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  code VARCHAR(20) NOT NULL UNIQUE,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create schedules table
+CREATE TABLE IF NOT EXISTS schedules (
+  id VARCHAR(36) PRIMARY KEY,
+  subject_id VARCHAR(36) NOT NULL,
+  teacher_id VARCHAR(36) NOT NULL,
+  class VARCHAR(20) NOT NULL,
+  day_of_week ENUM('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday') NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+  FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+);
+
+-- Create attendance table
+CREATE TABLE IF NOT EXISTS attendance (
+  id VARCHAR(36) PRIMARY KEY,
+  schedule_id VARCHAR(36) NOT NULL,
+  student_id VARCHAR(36) NOT NULL,
+  date DATE NOT NULL,
+  status ENUM('present', 'absent', 'late', 'sick', 'permission') NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);

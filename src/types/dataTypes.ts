@@ -1,62 +1,64 @@
 
 export type Student = {
   id: string;
+  student_id: string;
   name: string;
-  studentId: string;
   class: string;
   email: string;
-  password?: string; // For authentication
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Teacher = {
   id: string;
+  teacher_id: string;
   name: string;
-  teacherId: string;
   email: string;
-  subjects: string[];
-  password?: string; // For authentication
+  subject_id?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
-export type Admin = {
+export type User = {
   id: string;
   name: string;
   email: string;
   password: string;
-};
-
-export type UserRole = 'student' | 'teacher' | 'admin';
-
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  roleId: string; // References the ID in the role-specific table
+  role: 'admin' | 'teacher';
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Subject = {
   id: string;
   name: string;
   code: string;
-  teacherId: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Schedule = {
   id: string;
-  subjectId: string;
-  teacherId: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  roomNumber: string;
+  subject_id: string;
+  teacher_id: string;
+  class: string;
+  day_of_week: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  start_time: string;
+  end_time: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Attendance = {
   id: string;
-  studentId: string;
-  scheduleId: string;
-  subjectId: string;
+  schedule_id: string;
+  student_id: string;
   date: string;
-  status: 'present' | 'absent' | 'late';
-  timestamp: string;
+  status: 'present' | 'absent' | 'late' | 'sick' | 'permission';
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 };
+
+

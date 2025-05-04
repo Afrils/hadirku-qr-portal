@@ -1,4 +1,31 @@
-# Welcome to your Lovable project
+# Hadirku QR Portal
+
+Aplikasi web untuk manajemen kehadiran siswa menggunakan QR Code.
+
+## Teknologi yang Digunakan
+
+### Frontend
+- React 18 dengan TypeScript
+- Vite sebagai build tool
+- TailwindCSS untuk styling
+- Shadcn/ui untuk komponen UI
+- React Router untuk routing
+- React Hook Form & Zod untuk form handling dan validasi
+- React Query untuk state management
+- XLSX untuk export data ke Excel
+
+### Backend
+- MySQL sebagai database
+- Node.js
+- QR Code generation dengan qrcode
+- Password hashing dengan bcryptjs
+- UUID untuk generate ID
+
+### Development Tools
+- TypeScript untuk type checking
+- ESLint untuk linting
+- Prettier untuk code formatting
+- Vite untuk development server dan building
 
 ## Project info
 
