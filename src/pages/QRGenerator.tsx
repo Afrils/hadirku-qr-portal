@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
 import { generateQRData } from '@/utils/qrCodeUtils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
+import { dbService } from '@/services/dbService';
+import { toast } from '@/components/ui/sonner';
 
 const QRGeneratorPage = () => {
   const { subjects, schedules, getSubjectById } = useAppContext();
@@ -25,6 +27,33 @@ const QRGeneratorPage = () => {
     if (selectedSchedule && selectedSubject && selectedDate) {
       const qrData = generateQRData(selectedSchedule, selectedSubject, selectedDate);
       setQrCodeData(qrData);
+      
+      // Create a test attendance record when QR is generated (simulating scanning)
+      setTimeout(() => {
+        try {
+          // Create attendance records for students
+          const students = dbService.getAllStudents().slice(0, 2); // Just use first two students
+          
+          students.forEach((student, index) => {
+            const delay = index * 2000; // Stagger the attendance records by 2 seconds
+            
+            setTimeout(() => {
+              dbService.createAttendance({
+                studentId: student.id,
+                scheduleId: selectedSchedule,
+                subjectId: selectedSubject,
+                date: selectedDate,
+                status: index === 0 ? 'present' : 'late',
+                timestamp: new Date(new Date().getTime() + delay).toISOString(),
+              });
+              
+              toast.success(`Presensi ${student.name} berhasil dicatat`);
+            }, delay);
+          });
+        } catch (error) {
+          console.error('Error creating test attendance records', error);
+        }
+      }, 2000);
     }
   };
 
@@ -163,6 +192,7 @@ const QRGeneratorPage = () => {
               <li>Tampilkan QR Code kepada siswa untuk dipindai dengan aplikasi mobile HadirKu.</li>
               <li>QR Code hanya berlaku untuk 15 menit demi keamanan.</li>
               <li>Gunakan tombol "Print" untuk mencetak QR code atau "Download" untuk menyimpannya.</li>
+              <li><strong>Demo Mode:</strong> Saat QR code dibuat, sistem akan otomatis mensimulasikan 2 siswa melakukan presensi.</li>
             </ol>
           </CardContent>
         </Card>

@@ -14,6 +14,7 @@ import Teachers from "./pages/Teachers";
 import Subjects from "./pages/Subjects";
 import Schedules from "./pages/Schedules";
 import QRGenerator from "./pages/QRGenerator";
+import Attendance from "./pages/Attendance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/subjects" element={<Subjects />} />
               <Route path="/schedules" element={<Schedules />} />
               <Route path="/qr-generator" element={<QRGenerator />} />
+              <Route path="/attendance" element={<Attendance />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

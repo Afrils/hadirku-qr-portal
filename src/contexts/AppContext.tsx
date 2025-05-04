@@ -1,39 +1,8 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/sonner';
-
-type Student = {
-  id: string;
-  name: string;
-  studentId: string;
-  class: string;
-  email: string;
-};
-
-type Teacher = {
-  id: string;
-  name: string;
-  teacherId: string;
-  email: string;
-  subjects: string[];
-};
-
-type Subject = {
-  id: string;
-  name: string;
-  code: string;
-  teacherId: string;
-};
-
-type Schedule = {
-  id: string;
-  subjectId: string;
-  teacherId: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  roomNumber: string;
-};
+import { Student, Teacher, Subject, Schedule } from '../types/dataTypes';
+import { dbService } from '../services/dbService';
 
 type AppContextType = {
   students: Student[];
@@ -54,195 +23,118 @@ type AppContextType = {
   deleteSchedule: (id: string) => void;
   getTeacherById: (id: string) => Teacher | undefined;
   getSubjectById: (id: string) => Subject | undefined;
+  refreshData: () => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Sample data
-const initialStudents: Student[] = [
-  {
-    id: '1',
-    name: 'Ahmad Farizi',
-    studentId: 'S001',
-    class: 'XII IPA 1',
-    email: 'ahmad.farizi@example.com',
-  },
-  {
-    id: '2',
-    name: 'Diah Purnama',
-    studentId: 'S002',
-    class: 'XII IPA 1',
-    email: 'diah.p@example.com',
-  },
-  {
-    id: '3',
-    name: 'Budi Santoso',
-    studentId: 'S003',
-    class: 'XII IPS 2',
-    email: 'budi.santoso@example.com',
-  },
-];
-
-const initialTeachers: Teacher[] = [
-  {
-    id: '1',
-    name: 'Siti Rahayu',
-    teacherId: 'T001',
-    email: 'siti.rahayu@example.com',
-    subjects: ['Matematika', 'Fisika'],
-  },
-  {
-    id: '2',
-    name: 'Bambang Wijaya',
-    teacherId: 'T002',
-    email: 'bambang.w@example.com',
-    subjects: ['Kimia'],
-  },
-];
-
-const initialSubjects: Subject[] = [
-  {
-    id: '1',
-    name: 'Matematika',
-    code: 'MTK12',
-    teacherId: '1',
-  },
-  {
-    id: '2',
-    name: 'Fisika',
-    code: 'FIS12',
-    teacherId: '1',
-  },
-  {
-    id: '3',
-    name: 'Kimia',
-    code: 'KIM12',
-    teacherId: '2',
-  },
-];
-
-const initialSchedules: Schedule[] = [
-  {
-    id: '1',
-    subjectId: '1',
-    teacherId: '1',
-    dayOfWeek: 'Senin',
-    startTime: '08:00',
-    endTime: '09:30',
-    roomNumber: 'R101',
-  },
-  {
-    id: '2',
-    subjectId: '2',
-    teacherId: '1',
-    dayOfWeek: 'Selasa',
-    startTime: '10:00',
-    endTime: '11:30',
-    roomNumber: 'R102',
-  },
-];
-
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+
+  // Load initial data
+  const loadData = () => {
+    setStudents(dbService.getAllStudents());
+    setTeachers(dbService.getAllTeachers());
+    setSubjects(dbService.getAllSubjects());
+    setSchedules(dbService.getAllSchedules());
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Function to refresh all data
+  const refreshData = () => {
+    loadData();
+  };
 
   // Student functions
   const addStudent = (student: Omit<Student, 'id'>) => {
-    const newStudent = {
-      ...student,
-      id: `${Date.now()}`,
-    };
-    setStudents([...students, newStudent]);
+    dbService.createStudent(student);
+    setStudents(dbService.getAllStudents());
     toast.success('Siswa berhasil ditambahkan');
   };
 
   const updateStudent = (id: string, student: Omit<Student, 'id'>) => {
-    setStudents(
-      students.map((s) => (s.id === id ? { ...student, id } : s))
-    );
+    dbService.updateStudent(id, student);
+    setStudents(dbService.getAllStudents());
     toast.success('Data siswa berhasil diperbarui');
   };
 
   const deleteStudent = (id: string) => {
-    setStudents(students.filter((s) => s.id !== id));
+    dbService.deleteStudent(id);
+    setStudents(dbService.getAllStudents());
     toast.success('Siswa berhasil dihapus');
   };
 
   // Teacher functions
   const addTeacher = (teacher: Omit<Teacher, 'id'>) => {
-    const newTeacher = {
-      ...teacher,
-      id: `${Date.now()}`,
-    };
-    setTeachers([...teachers, newTeacher]);
+    dbService.createTeacher(teacher);
+    setTeachers(dbService.getAllTeachers());
     toast.success('Guru berhasil ditambahkan');
   };
 
   const updateTeacher = (id: string, teacher: Omit<Teacher, 'id'>) => {
-    setTeachers(
-      teachers.map((t) => (t.id === id ? { ...teacher, id } : t))
-    );
+    dbService.updateTeacher(id, teacher);
+    setTeachers(dbService.getAllTeachers());
     toast.success('Data guru berhasil diperbarui');
   };
 
   const deleteTeacher = (id: string) => {
-    setTeachers(teachers.filter((t) => t.id !== id));
+    dbService.deleteTeacher(id);
+    setTeachers(dbService.getAllTeachers());
     toast.success('Guru berhasil dihapus');
   };
 
   // Subject functions
   const addSubject = (subject: Omit<Subject, 'id'>) => {
-    const newSubject = {
-      ...subject,
-      id: `${Date.now()}`,
-    };
-    setSubjects([...subjects, newSubject]);
+    dbService.createSubject(subject);
+    setSubjects(dbService.getAllSubjects());
     toast.success('Mata pelajaran berhasil ditambahkan');
   };
 
   const updateSubject = (id: string, subject: Omit<Subject, 'id'>) => {
-    setSubjects(
-      subjects.map((s) => (s.id === id ? { ...subject, id } : s))
-    );
+    dbService.updateSubject(id, subject);
+    setSubjects(dbService.getAllSubjects());
     toast.success('Mata pelajaran berhasil diperbarui');
   };
 
   const deleteSubject = (id: string) => {
-    setSubjects(subjects.filter((s) => s.id !== id));
+    dbService.deleteSubject(id);
+    setSubjects(dbService.getAllSubjects());
     toast.success('Mata pelajaran berhasil dihapus');
   };
 
   // Schedule functions
   const addSchedule = (schedule: Omit<Schedule, 'id'>) => {
-    const newSchedule = {
-      ...schedule,
-      id: `${Date.now()}`,
-    };
-    setSchedules([...schedules, newSchedule]);
+    dbService.createSchedule(schedule);
+    setSchedules(dbService.getAllSchedules());
     toast.success('Jadwal berhasil ditambahkan');
   };
 
   const updateSchedule = (id: string, schedule: Omit<Schedule, 'id'>) => {
-    setSchedules(
-      schedules.map((s) => (s.id === id ? { ...schedule, id } : s))
-    );
+    dbService.updateSchedule(id, schedule);
+    setSchedules(dbService.getAllSchedules());
     toast.success('Jadwal berhasil diperbarui');
   };
 
   const deleteSchedule = (id: string) => {
-    setSchedules(schedules.filter((s) => s.id !== id));
+    dbService.deleteSchedule(id);
+    setSchedules(dbService.getAllSchedules());
     toast.success('Jadwal berhasil dihapus');
   };
 
   // Utility functions
   const getTeacherById = (id: string) => {
-    return teachers.find((teacher) => teacher.id === id);
+    return dbService.getTeacherById(id);
   };
 
   const getSubjectById = (id: string) => {
-    return subjects.find((subject) => subject.id === id);
+    return dbService.getSubjectById(id);
   };
 
   return (
@@ -266,6 +158,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteSchedule,
         getTeacherById,
         getSubjectById,
+        refreshData,
       }}
     >
       {children}
