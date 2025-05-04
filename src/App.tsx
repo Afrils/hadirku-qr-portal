@@ -1,12 +1,13 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./contexts/AppContext";
+
 import MainLayout from "./components/MainLayout";
-import { useState } from "react";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -119,8 +120,8 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  // Create a new QueryClient instance inside the component
-  const [queryClient] = useState(() => new QueryClient());
+  // Create QueryClient instance
+  const queryClient = new QueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
