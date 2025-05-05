@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,9 +73,7 @@ const QRGeneratorPage = () => {
     if (!selectedSubject || !selectedSchedule || !selectedDate) return 'QR Code Presensi';
     
     const subject = getSubjectById(selectedSubject);
-    const schedule = schedules.find(s => s.id === selectedSchedule);
-    
-    if (!subject || !schedule) return 'QR Code Presensi';
+    if (!subject) return 'QR Code Presensi';
     
     return `Presensi ${subject.name} - ${formatDateForDisplay(selectedDate)}`;
   };

@@ -27,6 +27,7 @@ const Schedules = () => {
     startTime: '',
     endTime: '',
     roomNumber: '',
+    class: '', // Added class field
   });
 
   const resetForm = () => {
@@ -37,6 +38,7 @@ const Schedules = () => {
       startTime: '',
       endTime: '',
       roomNumber: '',
+      class: '',
     });
     setIsEditMode(false);
     setCurrentId(null);
@@ -54,6 +56,7 @@ const Schedules = () => {
         startTime: schedule.startTime,
         endTime: schedule.endTime,
         roomNumber: schedule.roomNumber,
+        class: schedule.class,
       });
     }
     setIsDialogOpen(true);
@@ -131,6 +134,7 @@ const Schedules = () => {
               <TableHead>Mata Pelajaran</TableHead>
               <TableHead>Guru</TableHead>
               <TableHead>Waktu</TableHead>
+              <TableHead>Kelas</TableHead>
               <TableHead>Ruang</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -146,6 +150,7 @@ const Schedules = () => {
                     <TableCell>{subject ? subject.name : 'Tidak ada'}</TableCell>
                     <TableCell>{teacher ? teacher.name : 'Tidak ada'}</TableCell>
                     <TableCell>{`${schedule.startTime} - ${schedule.endTime}`}</TableCell>
+                    <TableCell>{schedule.class}</TableCell>
                     <TableCell>{schedule.roomNumber}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
@@ -168,7 +173,7 @@ const Schedules = () => {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Tidak ada jadwal yang ditemukan
                 </TableCell>
               </TableRow>
@@ -206,6 +211,7 @@ const Schedules = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label htmlFor="subjectId" className="text-right">
                   Mata Pelajaran
@@ -226,6 +232,7 @@ const Schedules = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label htmlFor="teacherId" className="text-right">
                   Guru
@@ -246,6 +253,21 @@ const Schedules = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label htmlFor="class" className="text-right">
+                  Kelas
+                </Label>
+                <Input
+                  id="class"
+                  name="class"
+                  value={formData.class}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label htmlFor="startTime" className="text-right">
                   Waktu Mulai
@@ -260,6 +282,7 @@ const Schedules = () => {
                   required
                 />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label htmlFor="endTime" className="text-right">
                   Waktu Selesai
@@ -274,6 +297,7 @@ const Schedules = () => {
                   required
                 />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label htmlFor="roomNumber" className="text-right">
                   Ruang

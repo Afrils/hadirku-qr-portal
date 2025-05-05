@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +25,7 @@ import { Student } from '@/types/dataTypes';
 
 const studentSchema = z.object({
   name: z.string().min(3, 'Nama harus minimal 3 karakter'),
-  student_id: z.string().min(5, 'NIS harus minimal 5 karakter'),
+  studentId: z.string().min(5, 'NIS harus minimal 5 karakter'),
   class: z.string().min(1, 'Kelas harus diisi'),
   email: z.string().email('Format email tidak valid'),
 });
@@ -50,7 +49,7 @@ const Students = () => {
     resolver: zodResolver(studentSchema),
     defaultValues: {
       name: '',
-      student_id: '',
+      studentId: '',
       class: '',
       email: '',
     },
@@ -69,7 +68,7 @@ const Students = () => {
       setCurrentId(student.id);
       form.reset({
         name: student.name,
-        student_id: student.student_id,
+        studentId: student.studentId,
         class: student.class,
         email: student.email,
       });
@@ -88,7 +87,7 @@ const Students = () => {
       // Memastikan semua field required terisi
       const studentData: Omit<Student, 'id'> = {
         name: data.name,
-        student_id: data.student_id,
+        studentId: data.studentId,
         class: data.class,
         email: data.email
       };
@@ -108,7 +107,7 @@ const Students = () => {
 
   const exportToExcel = () => {
     const data = students.map(student => ({
-      'NIS': student.student_id,
+      'NIS': student.studentId,
       'Nama': student.name,
       'Kelas': student.class,
       'Email': student.email
@@ -135,7 +134,7 @@ const Students = () => {
 
   const filteredStudents = students.filter((student) =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.class.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -155,7 +154,7 @@ const Students = () => {
     return sortableItems;
   }, [filteredStudents, sortConfig]);
 
-  const handleSort = (key: keyof Omit<Student, 'created_at' | 'updated_at'>) => {
+  const handleSort = (key: keyof Student) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (
       sortConfig &&
@@ -232,10 +231,10 @@ const Students = () => {
                 <Button
                   variant="ghost"
                   className="hover:bg-transparent"
-                  onClick={() => handleSort('student_id')}
+                  onClick={() => handleSort('studentId')}
                 >
                   NIS
-                  {sortConfig?.key === 'student_id' && (
+                  {sortConfig?.key === 'studentId' && (
                     <span className="ml-2">
                       {sortConfig.direction === 'asc' ? '↑' : '↓'}
                     </span>
@@ -305,7 +304,7 @@ const Students = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell>{student.student_id}</TableCell>
+                  <TableCell>{student.studentId}</TableCell>
                   <TableCell>{student.name}</TableCell>
                   <TableCell>{student.class}</TableCell>
                   <TableCell>{student.email}</TableCell>
@@ -419,7 +418,7 @@ const Students = () => {
               />
               <FormField
                 control={form.control}
-                name="student_id"
+                name="studentId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>NIS</FormLabel>

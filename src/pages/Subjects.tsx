@@ -40,7 +40,7 @@ const Subjects = () => {
       setFormData({
         name: subject.name,
         code: subject.code,
-        teacherId: subject.teacherId,
+        teacherId: subject.teacherId || '',
       });
     }
     setIsDialogOpen(true);
@@ -116,7 +116,7 @@ const Subjects = () => {
           <TableBody>
             {filteredSubjects.length > 0 ? (
               filteredSubjects.map((subject) => {
-                const teacher = getTeacherById(subject.teacherId);
+                const teacher = subject.teacherId ? getTeacherById(subject.teacherId) : null;
                 return (
                   <TableRow key={subject.id}>
                     <TableCell>{subject.code}</TableCell>
