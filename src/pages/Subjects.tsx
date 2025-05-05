@@ -8,6 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { Pencil, Trash } from 'lucide-react';
+import { Subject } from '@/types/dataTypes';
+
+type FormData = {
+  name: string;
+  code: string;
+  teacherId: string;
+};
 
 const Subjects = () => {
   const { subjects, teachers, addSubject, updateSubject, deleteSubject, getTeacherById } = useAppContext();
@@ -16,7 +23,7 @@ const Subjects = () => {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     code: '',
     teacherId: '',
@@ -32,7 +39,7 @@ const Subjects = () => {
     setCurrentId(null);
   };
 
-  const handleOpenDialog = (edit = false, subject = null) => {
+  const handleOpenDialog = (edit = false, subject: Subject | null = null) => {
     resetForm();
     if (edit && subject) {
       setIsEditMode(true);
