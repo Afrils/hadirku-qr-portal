@@ -1,18 +1,8 @@
 
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
+import { dbService } from '../services/dbService';
 
-dotenv.config();
+// This is a browser-safe database configuration that will use localStorage
+// instead of MySQL when running in a browser environment
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'hadirku_qr',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-export default pool;
+// Export the dbService as the default database interface
+export default dbService;
