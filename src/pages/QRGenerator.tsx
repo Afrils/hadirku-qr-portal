@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -10,6 +9,7 @@ import { generateQRData } from '@/utils/qrCodeUtils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import { dbService } from '@/services/dbService';
 import { toast } from '@/components/ui/sonner';
+import { Subject } from '@/types/dataTypes';
 
 const QRGeneratorPage = () => {
   const { subjects, schedules, getSubjectById } = useAppContext();
@@ -17,11 +17,26 @@ const QRGeneratorPage = () => {
   const [selectedSchedule, setSelectedSchedule] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [subjectDetails, setSubjectDetails] = useState<Subject | null>(null);
 
   // Filter schedules based on selected subject
   const filteredSchedules = selectedSubject 
     ? schedules.filter(schedule => schedule.subjectId === selectedSubject)
     : [];
+
+  // Fetch subject details when selectedSubject changes
+  useEffect(() => {
+    const fetchSubjectDetails = async () => {
+      if (selectedSubject) {
+        const subject = await getSubjectById(selectedSubject);
+        setSubjectDetails(subject);
+      } else {
+        setSubjectDetails(null);
+      }
+    };
+
+    fetchSubjectDetails();
+  }, [selectedSubject, getSubjectById]);
 
   const handleGenerateQR = () => {
     if (selectedSchedule && selectedSubject && selectedDate) {
@@ -73,10 +88,9 @@ const QRGeneratorPage = () => {
   const getQRTitle = () => {
     if (!selectedSubject || !selectedSchedule || !selectedDate) return 'QR Code Presensi';
     
-    const subject = getSubjectById(selectedSubject);
-    if (!subject) return 'QR Code Presensi';
-    
-    return `Presensi ${subject.name} - ${formatDateForDisplay(selectedDate)}`;
+    return subjectDetails 
+      ? `Presensi ${subjectDetails.name} - ${formatDateForDisplay(selectedDate)}`
+      : 'QR Code Presensi';
   };
 
   return (

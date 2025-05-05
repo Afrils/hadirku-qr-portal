@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,12 +8,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { Pencil, Trash } from 'lucide-react';
-import { Subject } from '@/types/dataTypes';
+import { Subject, Teacher } from '@/types/dataTypes';
 
 type FormData = {
   name: string;
   code: string;
   teacherId: string;
+};
+
+type SubjectWithTeacher = {
+  subject: Subject;
+  teacher: Teacher | null;
 };
 
 const Subjects = () => {
@@ -22,12 +27,31 @@ const Subjects = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [subjectsWithTeacher, setSubjectsWithTeacher] = useState<SubjectWithTeacher[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
     code: '',
     teacherId: '',
   });
+
+  // Fetch teacher details for each subject
+  useEffect(() => {
+    const fetchTeacherDetails = async () => {
+      const details = await Promise.all(
+        subjects.map(async (subject) => {
+          const teacher = subject.teacherId ? await getTeacherById(subject.teacherId) : null;
+          return {
+            subject,
+            teacher
+          };
+        })
+      );
+      setSubjectsWithTeacher(details);
+    };
+
+    fetchTeacherDetails();
+  }, [subjects, getTeacherById]);
 
   const resetForm = () => {
     setFormData({
@@ -89,10 +113,14 @@ const Subjects = () => {
     }
   };
 
-  const filteredSubjects = subjects.filter((subject) =>
-    subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    subject.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSubjects = subjectsWithTeacher.filter((item) => {
+    if (!searchTerm) return true;
+    
+    return (
+      item.subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.subject.code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -122,32 +150,29 @@ const Subjects = () => {
           </TableHeader>
           <TableBody>
             {filteredSubjects.length > 0 ? (
-              filteredSubjects.map((subject) => {
-                const teacher = subject.teacherId ? getTeacherById(subject.teacherId) : null;
-                return (
-                  <TableRow key={subject.id}>
-                    <TableCell>{subject.code}</TableCell>
-                    <TableCell>{subject.name}</TableCell>
-                    <TableCell>{teacher ? teacher.name : 'Tidak ada'}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(true, subject)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(subject.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              filteredSubjects.map((item) => (
+                <TableRow key={item.subject.id}>
+                  <TableCell>{item.subject.code}</TableCell>
+                  <TableCell>{item.subject.name}</TableCell>
+                  <TableCell>{item.teacher ? item.teacher.name : 'Tidak ada'}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDialog(true, item.subject)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(item.subject.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-8">

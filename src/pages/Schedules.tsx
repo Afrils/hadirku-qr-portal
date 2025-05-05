@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { Pencil, Trash } from 'lucide-react';
-import { Schedule } from '@/types/dataTypes';
+import { Schedule, Subject, Teacher } from '@/types/dataTypes';
 
 // Explicitly define days of week to match the type in Schedule
 const daysOfWeek: Array<"Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Minggu"> = [
@@ -25,12 +25,19 @@ type FormType = {
   class: string;
 };
 
+type ScheduleWithDetails = {
+  schedule: Schedule;
+  subject: Subject | null;
+  teacher: Teacher | null;
+};
+
 const Schedules = () => {
   const { schedules, teachers, subjects, addSchedule, updateSchedule, deleteSchedule, getTeacherById, getSubjectById } = useAppContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [schedulesWithDetails, setSchedulesWithDetails] = useState<ScheduleWithDetails[]>([]);
   
   const [formData, setFormData] = useState<FormType>({
     subjectId: '',
@@ -41,6 +48,27 @@ const Schedules = () => {
     roomNumber: '',
     class: '',
   });
+
+  // Fetch all schedule details
+  useEffect(() => {
+    const fetchDetails = async () => {
+      const details = await Promise.all(
+        schedules.map(async (schedule) => {
+          const subject = await getSubjectById(schedule.subjectId);
+          const teacher = await getTeacherById(schedule.teacherId);
+          
+          return {
+            schedule,
+            subject,
+            teacher
+          };
+        })
+      );
+      setSchedulesWithDetails(details);
+    };
+
+    fetchDetails();
+  }, [schedules, getSubjectById, getTeacherById]);
 
   const resetForm = () => {
     setFormData({
@@ -122,15 +150,17 @@ const Schedules = () => {
     }
   };
 
-  const filteredSchedules = schedules.filter((schedule) => {
-    const subject = getSubjectById(schedule.subjectId);
-    const teacher = getTeacherById(schedule.teacherId);
+  const filteredSchedules = schedulesWithDetails.filter((item) => {
+    if (!searchTerm) return true;
+    
+    const subjectName = item.subject?.name || '';
+    const teacherName = item.teacher?.name || '';
     
     return (
-      (subject && subject.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (teacher && teacher.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      schedule.dayOfWeek.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.roomNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.schedule.dayOfWeek.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.schedule.roomNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -165,36 +195,32 @@ const Schedules = () => {
           </TableHeader>
           <TableBody>
             {filteredSchedules.length > 0 ? (
-              filteredSchedules.map((schedule) => {
-                const subject = getSubjectById(schedule.subjectId);
-                const teacher = getTeacherById(schedule.teacherId);
-                return (
-                  <TableRow key={schedule.id}>
-                    <TableCell>{schedule.dayOfWeek}</TableCell>
-                    <TableCell>{subject ? subject.name : 'Tidak ada'}</TableCell>
-                    <TableCell>{teacher ? teacher.name : 'Tidak ada'}</TableCell>
-                    <TableCell>{`${schedule.startTime} - ${schedule.endTime}`}</TableCell>
-                    <TableCell>{schedule.class}</TableCell>
-                    <TableCell>{schedule.roomNumber}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(true, schedule)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(schedule.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              filteredSchedules.map((item) => (
+                <TableRow key={item.schedule.id}>
+                  <TableCell>{item.schedule.dayOfWeek}</TableCell>
+                  <TableCell>{item.subject?.name || 'Tidak ada'}</TableCell>
+                  <TableCell>{item.teacher?.name || 'Tidak ada'}</TableCell>
+                  <TableCell>{`${item.schedule.startTime} - ${item.schedule.endTime}`}</TableCell>
+                  <TableCell>{item.schedule.class}</TableCell>
+                  <TableCell>{item.schedule.roomNumber}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDialog(true, item.schedule)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(item.schedule.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
