@@ -139,7 +139,7 @@ const Reports: React.FC = () => {
                   <SelectValue placeholder="Pilih mata pelajaran" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Mata Pelajaran</SelectItem>
+                  <SelectItem value="all">Semua Mata Pelajaran</SelectItem>
                   {subjects.map(subject => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name}
@@ -156,7 +156,7 @@ const Reports: React.FC = () => {
                   <SelectValue placeholder="Pilih siswa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Siswa</SelectItem>
+                  <SelectItem value="all">Semua Siswa</SelectItem>
                   {students.map(student => (
                     <SelectItem key={student.id} value={student.id}>
                       {student.name}
@@ -173,7 +173,7 @@ const Reports: React.FC = () => {
                   <SelectValue placeholder="Pilih status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Status</SelectItem>
+                  <SelectItem value="all">Semua Status</SelectItem>
                   <SelectItem value="present">Hadir</SelectItem>
                   <SelectItem value="late">Terlambat</SelectItem>
                   <SelectItem value="absent">Tidak Hadir</SelectItem>

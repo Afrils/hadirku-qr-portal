@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -145,7 +146,7 @@ const QRGeneratorPage = () => {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="none" disabled>
+                      <SelectItem value="no-schedules" disabled>
                         Tidak ada jadwal tersedia
                       </SelectItem>
                     )}

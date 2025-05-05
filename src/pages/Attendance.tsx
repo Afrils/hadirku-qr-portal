@@ -129,7 +129,7 @@ const AttendancePage = () => {
                 <SelectValue placeholder="Pilih mata pelajaran" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Mata Pelajaran</SelectItem>
+                <SelectItem value="all">Semua Mata Pelajaran</SelectItem>
                 {subjects.map((subject) => (
                   <SelectItem key={subject.id} value={subject.id}>
                     {subject.name}
@@ -150,7 +150,7 @@ const AttendancePage = () => {
                 <SelectValue placeholder={selectedSubject ? 'Pilih jadwal' : 'Pilih mata pelajaran terlebih dahulu'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Jadwal</SelectItem>
+                <SelectItem value="all">Semua Jadwal</SelectItem>
                 {filteredSchedules.map((schedule) => (
                   <SelectItem key={schedule.id} value={schedule.id}>
                     {`${schedule.dayOfWeek}, ${schedule.startTime} - ${schedule.endTime}`}
