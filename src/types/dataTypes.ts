@@ -60,5 +60,3 @@ export type Attendance = {
   created_at?: string;
   updated_at?: string;
 };
-
-

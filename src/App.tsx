@@ -120,16 +120,16 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  // Create QueryClient instance
+  // Fix: Create QueryClient instance inside the component
   const queryClient = new QueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <TooltipProvider>
+          <AppRoutes />
           <Toaster />
           <Sonner />
-          <AppRoutes />
         </TooltipProvider>
       </AppProvider>
     </QueryClientProvider>
