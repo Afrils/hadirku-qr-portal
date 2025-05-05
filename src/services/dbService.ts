@@ -1,3 +1,4 @@
+
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
 
 // Mock data for initial state
@@ -62,6 +63,7 @@ const initialUsers: User[] = [
     id: `student-${student.id}`,
     email: student.email,
     name: student.name,
+    password: student.password || '',
     role: 'student' as const,
     roleId: student.id
   })),
@@ -69,6 +71,7 @@ const initialUsers: User[] = [
     id: `teacher-${teacher.id}`,
     email: teacher.email,
     name: teacher.name,
+    password: teacher.password || '',
     role: 'teacher' as const,
     roleId: teacher.id
   })),
@@ -76,6 +79,7 @@ const initialUsers: User[] = [
     id: `admin-${admin.id}`,
     email: admin.email,
     name: admin.name,
+    password: admin.password,
     role: 'admin' as const,
     roleId: admin.id
   }))
@@ -107,6 +111,7 @@ const initialSchedules: Schedule[] = [
     id: '1',
     subjectId: '1',
     teacherId: '1',
+    class: 'XII IPA 1',
     dayOfWeek: 'Senin',
     startTime: '08:00',
     endTime: '09:30',
@@ -116,6 +121,7 @@ const initialSchedules: Schedule[] = [
     id: '2',
     subjectId: '2',
     teacherId: '1',
+    class: 'XII IPA 1',
     dayOfWeek: 'Selasa',
     startTime: '10:00',
     endTime: '11:30',
@@ -250,13 +256,13 @@ const authenticateUser = (email: string, password: string): User | null => {
   // Check password based on role
   let isValid = false;
   if (user.role === 'student') {
-    const student = getById<Student>(STORAGE_KEYS.STUDENTS, user.roleId);
+    const student = getById<Student>(STORAGE_KEYS.STUDENTS, user.roleId || '');
     isValid = student?.password === password;
   } else if (user.role === 'teacher') {
-    const teacher = getById<Teacher>(STORAGE_KEYS.TEACHERS, user.roleId);
+    const teacher = getById<Teacher>(STORAGE_KEYS.TEACHERS, user.roleId || '');
     isValid = teacher?.password === password;
   } else if (user.role === 'admin') {
-    const admin = getById<Admin>(STORAGE_KEYS.ADMINS, user.roleId);
+    const admin = getById<Admin>(STORAGE_KEYS.ADMINS, user.roleId || '');
     isValid = admin?.password === password;
   }
   

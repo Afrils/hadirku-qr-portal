@@ -1,20 +1,23 @@
 
 export type Student = {
   id: string;
-  student_id: string;
+  studentId: string;
   name: string;
   class: string;
   email: string;
+  password?: string;
   created_at?: string;
   updated_at?: string;
 };
 
 export type Teacher = {
   id: string;
-  teacher_id: string;
+  teacherId: string;
   name: string;
   email: string;
-  subject_id?: string;
+  password?: string;
+  subjectId?: string;
+  subjects?: string[];
   created_at?: string;
   updated_at?: string;
 };
@@ -24,7 +27,8 @@ export type User = {
   name: string;
   email: string;
   password: string;
-  role: 'admin' | 'teacher';
+  role: 'admin' | 'teacher' | 'student';
+  roleId?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -33,6 +37,7 @@ export type Subject = {
   id: string;
   name: string;
   code: string;
+  teacherId?: string;
   description?: string;
   created_at?: string;
   updated_at?: string;
@@ -40,23 +45,35 @@ export type Subject = {
 
 export type Schedule = {
   id: string;
-  subject_id: string;
-  teacher_id: string;
+  subjectId: string;
+  teacherId: string;
   class: string;
-  day_of_week: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
-  start_time: string;
-  end_time: string;
+  dayOfWeek: 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu' | 'Minggu';
+  startTime: string;
+  endTime: string;
+  roomNumber: string;
   created_at?: string;
   updated_at?: string;
 };
 
 export type Attendance = {
   id: string;
-  schedule_id: string;
-  student_id: string;
+  scheduleId: string;
+  studentId: string;
+  subjectId: string;
   date: string;
   status: 'present' | 'absent' | 'late' | 'sick' | 'permission';
+  timestamp: string;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Admin = {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
   created_at?: string;
   updated_at?: string;
 };
