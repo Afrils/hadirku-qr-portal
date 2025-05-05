@@ -8,10 +8,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { Pencil, Trash } from 'lucide-react';
+import { Schedule } from '@/types/dataTypes';
 
-const daysOfWeek = [
+// Explicitly define days of week to match the type in Schedule
+const daysOfWeek: Array<"Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Minggu"> = [
   'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
 ];
+
+type FormType = {
+  subjectId: string;
+  teacherId: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  roomNumber: string;
+  class: string;
+};
 
 const Schedules = () => {
   const { schedules, teachers, subjects, addSchedule, updateSchedule, deleteSchedule, getTeacherById, getSubjectById } = useAppContext();
@@ -20,14 +32,14 @@ const Schedules = () => {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormType>({
     subjectId: '',
     teacherId: '',
     dayOfWeek: '',
     startTime: '',
     endTime: '',
     roomNumber: '',
-    class: '', // Added class field
+    class: '',
   });
 
   const resetForm = () => {
@@ -44,7 +56,7 @@ const Schedules = () => {
     setCurrentId(null);
   };
 
-  const handleOpenDialog = (edit = false, schedule = null) => {
+  const handleOpenDialog = (edit = false, schedule: Schedule | null = null) => {
     resetForm();
     if (edit && schedule) {
       setIsEditMode(true);
@@ -84,10 +96,22 @@ const Schedules = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Create a properly typed object for submission
+    const scheduleData: Omit<Schedule, "id"> = {
+      subjectId: formData.subjectId,
+      teacherId: formData.teacherId,
+      dayOfWeek: formData.dayOfWeek as "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Minggu",
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      roomNumber: formData.roomNumber,
+      class: formData.class,
+    };
+    
     if (isEditMode && currentId) {
-      updateSchedule(currentId, formData);
+      updateSchedule(currentId, scheduleData);
     } else {
-      addSchedule(formData);
+      addSchedule(scheduleData);
     }
     handleCloseDialog();
   };
