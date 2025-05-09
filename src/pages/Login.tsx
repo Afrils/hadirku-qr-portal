@@ -1,91 +1,124 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import DatabaseError from '@/components/DatabaseError';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAppContext();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { login, isLoading, hasError, databaseError, retryDatabaseConnection } = useAppContext();
   const navigate = useNavigate();
-  
-  useEffect(() => {
-    // If already authenticated, redirect to dashboard
-    if (isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
-    const success = login(email, password);
+    if (!email || !password) {
+      toast.error('Email dan password tidak boleh kosong');
+      return;
+    }
+
+    setIsLoggingIn(true);
     
-    setIsLoading(false);
-    if (success) {
-      navigate('/');
+    try {
+      const success = await login(email, password);
+      if (success) {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Gagal login. Silakan coba lagi.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
+  // If there's a database loading error, show the error component
+  if (hasError) {
+    return (
+      <DatabaseError 
+        onRetry={retryDatabaseConnection}
+        error={databaseError || undefined}
+      />
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center font-bold">HadirKu</CardTitle>
-          <CardDescription className="text-center">
-            Masukkan email dan password untuk login
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="nama@example.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
-              </Button>
-              
-              <div className="text-sm text-center text-gray-500 mt-4">
-                <p>Demo Accounts:</p>
-                <p>Admin: admin@example.com / admin123</p>
-                <p>Teacher: siti.rahayu@example.com / 123456</p>
-                <p>Student: ahmad.farizi@example.com / 123456</p>
-              </div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-4">
+        <Card className="shadow-lg">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/placeholder.svg"
+                alt="Logo"
+                className="h-16 w-16"
+              />
             </div>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground text-center">
-            Sistem Presensi Sekolah
-          </p>
-        </CardFooter>
-      </Card>
+            <h1 className="text-2xl font-semibold">HadirKu</h1>
+            <p className="text-gray-500">Aplikasi Presensi Elektronik</p>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                <p className="text-sm text-muted-foreground">Menghubungkan ke database...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">Email</label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Masukkan email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">Password</label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Masukkan password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoggingIn}
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sedang Login...
+                    </>
+                  ) : (
+                    'Login'
+                  )}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <div className="text-xs text-center text-gray-500">
+              <p>Demo Credentials:</p>
+              <p>Email: admin@example.com | Password: password123</p>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

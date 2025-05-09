@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Student, Teacher, Subject, Schedule, User } from '../types/dataTypes';
-import { mysqlService } from '../services/mysqlService';
+import { dbService } from '../services/dbService';
+import { handleError } from '@/utils/errorHandler';
 
 type AppContextType = {
   students: Student[];
@@ -27,6 +28,10 @@ type AppContextType = {
   getTeacherById: (id: string) => Promise<Teacher | null>;
   getSubjectById: (id: string) => Promise<Subject | null>;
   refreshData: () => void;
+  isLoading: boolean;
+  hasError: boolean;
+  databaseError: string | null;
+  retryDatabaseConnection: () => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,11 +43,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
 
   // Authentication functions
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const user = await mysqlService.login(email, password);
+      const user = await dbService.login(email, password);
       if (user) {
         setCurrentUser(user);
         setIsAuthenticated(true);
@@ -65,24 +73,65 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast.success('Anda telah keluar dari sistem.');
   };
 
+  // Function to initialize the database
+  const initializeDatabase = async () => {
+    try {
+      await dbService.initDatabase();
+      console.log("Database initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+      setDatabaseError(error instanceof Error ? error.message : "Unknown error initializing database");
+    }
+  };
+
   // Load initial data
   const loadData = async () => {
+    setIsLoading(true);
+    setHasError(false);
+    setDatabaseError(null);
+
     try {
+      await initializeDatabase();
+      
       const [studentsData, teachersData, subjectsData, schedulesData] = await Promise.all([
-        mysqlService.getAllStudents(),
-        mysqlService.getAllTeachers(),
-        mysqlService.getAllSubjects(),
-        mysqlService.getAllSchedules()
+        dbService.getAllStudents().catch(err => {
+          console.error('Error fetching students:', err);
+          return [] as Student[];
+        }),
+        dbService.getAllTeachers().catch(err => {
+          console.error('Error fetching teachers:', err);
+          return [] as Teacher[];
+        }),
+        dbService.getAllSubjects().catch(err => {
+          console.error('Error fetching subjects:', err);
+          return [] as Subject[];
+        }),
+        dbService.getAllSchedules().catch(err => {
+          console.error('Error fetching schedules:', err);
+          return [] as Schedule[];
+        })
       ]);
 
       setStudents(studentsData);
       setTeachers(teachersData);
       setSubjects(subjectsData);
       setSchedules(schedulesData);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error loading data:', error);
+      setHasError(true);
+      setDatabaseError(error instanceof Error ? error.message : 'Failed to load data from database');
+      setIsLoading(false);
       toast.error('Gagal memuat data');
     }
+  };
+
+  // Function to retry database connection
+  const retryDatabaseConnection = () => {
+    setIsLoading(true);
+    setHasError(false);
+    setDatabaseError(null);
+    loadData();
   };
 
   // Load data on component mount
@@ -90,11 +139,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadData();
   }, []);
 
-  // Refresh data periodically
+  // Refresh data periodically, but only if we have no errors
   useEffect(() => {
-    const interval = setInterval(loadData, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
+    let interval: number | undefined;
+    
+    if (!hasError) {
+      interval = window.setInterval(() => {
+        loadData();
+      }, 60000); // Refresh every minute instead of 30 seconds to reduce load
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [hasError]);
 
   // Function to refresh all data
   const refreshData = () => {
@@ -104,8 +164,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Student functions
   const addStudent = async (student: Omit<Student, 'id'>) => {
     try {
-      await mysqlService.createStudent(student);
-      const updatedStudents = await mysqlService.getAllStudents();
+      await dbService.createStudent(student);
+      const updatedStudents = await dbService.getAllStudents();
       setStudents(updatedStudents);
       toast.success('Siswa berhasil ditambahkan');
     } catch (error) {
@@ -117,8 +177,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateStudent = async (id: string, student: Omit<Student, 'id'>) => {
     try {
-      await mysqlService.updateStudent(id, student);
-      const updatedStudents = await mysqlService.getAllStudents();
+      await dbService.updateStudent(id, student);
+      const updatedStudents = await dbService.getAllStudents();
       setStudents(updatedStudents);
       toast.success('Data siswa berhasil diperbarui');
     } catch (error) {
@@ -130,8 +190,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteStudent = async (id: string) => {
     try {
-      await mysqlService.deleteStudent(id);
-      const updatedStudents = await mysqlService.getAllStudents();
+      await dbService.deleteStudent(id);
+      const updatedStudents = await dbService.getAllStudents();
       setStudents(updatedStudents);
       toast.success('Siswa berhasil dihapus');
     } catch (error) {
@@ -144,8 +204,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Teacher functions
   const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
     try {
-      await mysqlService.createTeacher(teacher);
-      const updatedTeachers = await mysqlService.getAllTeachers();
+      await dbService.createTeacher(teacher);
+      const updatedTeachers = await dbService.getAllTeachers();
       setTeachers(updatedTeachers);
       toast.success('Guru berhasil ditambahkan');
     } catch (error) {
@@ -157,8 +217,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateTeacher = async (id: string, teacher: Omit<Teacher, 'id'>) => {
     try {
-      await mysqlService.updateTeacher(id, teacher);
-      const updatedTeachers = await mysqlService.getAllTeachers();
+      await dbService.updateTeacher(id, teacher);
+      const updatedTeachers = await dbService.getAllTeachers();
       setTeachers(updatedTeachers);
       toast.success('Data guru berhasil diperbarui');
     } catch (error) {
@@ -170,8 +230,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteTeacher = async (id: string) => {
     try {
-      await mysqlService.deleteTeacher(id);
-      const updatedTeachers = await mysqlService.getAllTeachers();
+      await dbService.deleteTeacher(id);
+      const updatedTeachers = await dbService.getAllTeachers();
       setTeachers(updatedTeachers);
       toast.success('Guru berhasil dihapus');
     } catch (error) {
@@ -184,8 +244,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Subject functions
   const addSubject = async (subject: Omit<Subject, 'id'>) => {
     try {
-      await mysqlService.createSubject(subject);
-      const updatedSubjects = await mysqlService.getAllSubjects();
+      await dbService.createSubject(subject);
+      const updatedSubjects = await dbService.getAllSubjects();
       setSubjects(updatedSubjects);
       toast.success('Mata pelajaran berhasil ditambahkan');
     } catch (error) {
@@ -197,8 +257,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSubject = async (id: string, subject: Omit<Subject, 'id'>) => {
     try {
-      await mysqlService.updateSubject(id, subject);
-      const updatedSubjects = await mysqlService.getAllSubjects();
+      await dbService.updateSubject(id, subject);
+      const updatedSubjects = await dbService.getAllSubjects();
       setSubjects(updatedSubjects);
       toast.success('Mata pelajaran berhasil diperbarui');
     } catch (error) {
@@ -210,8 +270,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteSubject = async (id: string) => {
     try {
-      await mysqlService.deleteSubject(id);
-      const updatedSubjects = await mysqlService.getAllSubjects();
+      await dbService.deleteSubject(id);
+      const updatedSubjects = await dbService.getAllSubjects();
       setSubjects(updatedSubjects);
       toast.success('Mata pelajaran berhasil dihapus');
     } catch (error) {
@@ -224,8 +284,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Schedule functions
   const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
     try {
-      await mysqlService.createSchedule(schedule);
-      const updatedSchedules = await mysqlService.getAllSchedules();
+      await dbService.createSchedule(schedule);
+      const updatedSchedules = await dbService.getAllSchedules();
       setSchedules(updatedSchedules);
       toast.success('Jadwal berhasil ditambahkan');
     } catch (error) {
@@ -237,8 +297,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSchedule = async (id: string, schedule: Omit<Schedule, 'id'>) => {
     try {
-      await mysqlService.updateSchedule(id, schedule);
-      const updatedSchedules = await mysqlService.getAllSchedules();
+      await dbService.updateSchedule(id, schedule);
+      const updatedSchedules = await dbService.getAllSchedules();
       setSchedules(updatedSchedules);
       toast.success('Jadwal berhasil diperbarui');
     } catch (error) {
@@ -250,8 +310,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteSchedule = async (id: string) => {
     try {
-      await mysqlService.deleteSchedule(id);
-      const updatedSchedules = await mysqlService.getAllSchedules();
+      await dbService.deleteSchedule(id);
+      const updatedSchedules = await dbService.getAllSchedules();
       setSchedules(updatedSchedules);
       toast.success('Jadwal berhasil dihapus');
     } catch (error) {
@@ -263,11 +323,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Utility functions
   const getTeacherById = async (id: string) => {
-    return await mysqlService.getTeacherById(id);
+    return await dbService.getTeacherById(id);
   };
 
   const getSubjectById = async (id: string) => {
-    return await mysqlService.getSubjectById(id);
+    return await dbService.getSubjectById(id);
   };
 
   return (
@@ -296,6 +356,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         getTeacherById,
         getSubjectById,
         refreshData,
+        isLoading,
+        hasError,
+        databaseError,
+        retryDatabaseConnection
       }}
     >
       {children}
