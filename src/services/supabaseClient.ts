@@ -121,13 +121,14 @@ export const initializeDatabase = async () => {
     console.log('Checking and initializing database tables if needed...');
     
     // Enable the pgcrypto extension for UUID generation if not already enabled
-    await supabase.rpc('extensions', { 
-      name: 'pgcrypto' 
-    }).then(() => {
+    try {
+      await supabase.rpc('extensions', { 
+        name: 'pgcrypto' 
+      });
       console.log('pgcrypto extension enabled');
-    }).catch((err) => {
+    } catch (err) {
       console.warn('Could not enable pgcrypto extension, might already be enabled:', err);
-    });
+    }
     
     // Check if key tables exist
     const studentTableExists = await tableExists(TABLES.STUDENTS);
