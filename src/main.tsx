@@ -5,6 +5,7 @@ import App from './App.tsx';
 import './index.css';
 import { initCapacitor } from './capacitor';
 import { supabase, initializeDatabase } from './services/supabaseClient';
+import { dbService } from './services/dbService';
 import { toast } from './components/ui/sonner';
 
 // Initialize Capacitor and database if we're on a browser or native platform
@@ -13,10 +14,18 @@ const initializeApp = async () => {
     await initCapacitor();
   }
 
-  // Initialize database connection
+  // Initialize database connection and tables
   try {
+    console.log('Initializing database...');
     const result = await initializeDatabase();
-    if (!result.success) {
+    
+    if (result.success) {
+      console.log('Database tables initialized successfully');
+      
+      // Seed initial data
+      await dbService.initDatabase();
+      console.log('Data seeding completed');
+    } else {
       console.warn('Database initialization had issues:', result.error);
       toast.error('Terdapat masalah saat menginisialisasi database. Beberapa fitur mungkin tidak berfungsi.');
     }

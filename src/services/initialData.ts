@@ -5,24 +5,24 @@ import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '..
 export const initialStudents: Student[] = [
   {
     id: '1',
-    name: 'Ahmad Farizi',
     studentId: 'S001',
+    name: 'Ahmad Farizi',
     class: 'XII IPA 1',
     email: 'ahmad.farizi@example.com',
     password: '123456',
   },
   {
     id: '2',
-    name: 'Diah Purnama',
     studentId: 'S002',
+    name: 'Diah Purnama',
     class: 'XII IPA 1',
     email: 'diah.p@example.com',
     password: '123456',
   },
   {
     id: '3',
-    name: 'Budi Santoso',
     studentId: 'S003',
+    name: 'Budi Santoso',
     class: 'XII IPS 2',
     email: 'budi.santoso@example.com',
     password: '123456',
@@ -32,16 +32,16 @@ export const initialStudents: Student[] = [
 export const initialTeachers: Teacher[] = [
   {
     id: '1',
-    name: 'Siti Rahayu',
     teacherId: 'T001',
+    name: 'Siti Rahayu',
     email: 'siti.rahayu@example.com',
     subjects: ['Matematika', 'Fisika'],
     password: '123456',
   },
   {
     id: '2',
-    name: 'Bambang Wijaya',
     teacherId: 'T002',
+    name: 'Bambang Wijaya',
     email: 'bambang.w@example.com',
     subjects: ['Kimia'],
     password: '123456',
@@ -63,7 +63,7 @@ export const initialUsers: User[] = [
     id: `student-${student.id}`,
     email: student.email,
     name: student.name,
-    password: student.password || '',
+    password: student.password || '123456',
     role: 'student' as const,
     roleId: student.id
   })),
@@ -71,7 +71,7 @@ export const initialUsers: User[] = [
     id: `teacher-${teacher.id}`,
     email: teacher.email,
     name: teacher.name,
-    password: teacher.password || '',
+    password: teacher.password || '123456',
     role: 'teacher' as const,
     roleId: teacher.id
   })),

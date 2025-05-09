@@ -114,7 +114,7 @@ const Login = () => {
           <CardFooter className="flex justify-center">
             <div className="text-xs text-center text-gray-500">
               <p>Demo Credentials:</p>
-              <p>Email: admin@example.com | Password: password123</p>
+              <p>Email: admin@example.com | Password: admin123</p>
             </div>
           </CardFooter>
         </Card>
