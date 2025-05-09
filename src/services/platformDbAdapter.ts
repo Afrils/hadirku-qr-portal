@@ -1,17 +1,28 @@
 
 import { dbService } from './dbService';
+import { supabase, initializeDatabase } from './supabaseClient';
+import { Capacitor } from '@capacitor/core';
 
 // This adapter helps ensure smooth database operations across platforms (web, Android)
 export const platformDbAdapter = {
   /**
    * Initialize database connection based on platform
    */
-  init: () => {
+  init: async () => {
     if (isPlatformAndroid()) {
-      console.log('Android platform detected, initializing local storage');
-      // Currently using localStorage on both platforms, but this provides an extension point
-      // for platform-specific storage in the future
+      console.log('Android platform detected, initializing database connection');
+      // Initialize storage that's appropriate for the platform
+      // For Android, we'll still use Supabase but might set up additional offline capabilities
     }
+    
+    // Initialize Supabase database connection and tables
+    try {
+      await initializeDatabase();
+      console.log('Database connection initialized successfully');
+    } catch (error) {
+      console.error('Error initializing database:', error);
+    }
+    
     return dbService;
   },
 
@@ -23,13 +34,22 @@ export const platformDbAdapter = {
   },
 
   /**
-   * Sync local data with remote server (for future implementation)
+   * Sync local data with remote server
    */
   syncWithRemote: async () => {
-    // This would be implemented when you have a remote database server
+    // For offline-first functionality (potential future implementation)
+    // This would sync any locally cached data with Supabase when online
     console.log('Sync with remote database requested');
+    
     // For now just return a resolved promise
     return Promise.resolve({ success: true });
+  },
+  
+  /**
+   * Get Supabase client directly if needed
+   */
+  getSupabaseClient: () => {
+    return supabase;
   }
 };
 
@@ -39,10 +59,7 @@ export const platformDbAdapter = {
 function isPlatformAndroid(): boolean {
   // Check for Android platform using Capacitor
   try {
-    // This will be replaced with proper Capacitor platform detection
-    // when Capacitor is fully initialized
-    return typeof window !== 'undefined' && 
-           /Android/i.test(navigator.userAgent);
+    return Capacitor.getPlatform() === 'android';
   } catch (e) {
     return false;
   }

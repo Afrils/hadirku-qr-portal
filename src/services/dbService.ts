@@ -1,274 +1,108 @@
 
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
+import { supabase, TABLES, handleSupabaseError } from './supabaseClient';
 
-// Mock data for initial state
-const initialStudents: Student[] = [
-  {
-    id: '1',
-    name: 'Ahmad Farizi',
-    studentId: 'S001',
-    class: 'XII IPA 1',
-    email: 'ahmad.farizi@example.com',
-    password: '123456',
-  },
-  {
-    id: '2',
-    name: 'Diah Purnama',
-    studentId: 'S002',
-    class: 'XII IPA 1',
-    email: 'diah.p@example.com',
-    password: '123456',
-  },
-  {
-    id: '3',
-    name: 'Budi Santoso',
-    studentId: 'S003',
-    class: 'XII IPS 2',
-    email: 'budi.santoso@example.com',
-    password: '123456',
-  },
-];
+// Import the initial data (we'll use this for the first time setup or when resetting)
+import {
+  initialStudents,
+  initialTeachers,
+  initialAdmins,
+  initialUsers,
+  initialSubjects,
+  initialSchedules,
+  initialAttendances
+} from './initialData';
 
-const initialTeachers: Teacher[] = [
-  {
-    id: '1',
-    name: 'Siti Rahayu',
-    teacherId: 'T001',
-    email: 'siti.rahayu@example.com',
-    subjects: ['Matematika', 'Fisika'],
-    password: '123456',
-  },
-  {
-    id: '2',
-    name: 'Bambang Wijaya',
-    teacherId: 'T002',
-    email: 'bambang.w@example.com',
-    subjects: ['Kimia'],
-    password: '123456',
-  },
-];
-
-const initialAdmins: Admin[] = [
-  {
-    id: '1',
-    name: 'Admin Utama',
-    email: 'admin@example.com',
-    password: 'admin123',
-  }
-];
-
-// Combine all users for authentication
-const initialUsers: User[] = [
-  ...initialStudents.map(student => ({
-    id: `student-${student.id}`,
-    email: student.email,
-    name: student.name,
-    password: student.password || '',
-    role: 'student' as const,
-    roleId: student.id
-  })),
-  ...initialTeachers.map(teacher => ({
-    id: `teacher-${teacher.id}`,
-    email: teacher.email,
-    name: teacher.name,
-    password: teacher.password || '',
-    role: 'teacher' as const,
-    roleId: teacher.id
-  })),
-  ...initialAdmins.map(admin => ({
-    id: `admin-${admin.id}`,
-    email: admin.email,
-    name: admin.name,
-    password: admin.password,
-    role: 'admin' as const,
-    roleId: admin.id
-  }))
-];
-
-const initialSubjects: Subject[] = [
-  {
-    id: '1',
-    name: 'Matematika',
-    code: 'MTK12',
-    teacherId: '1',
-  },
-  {
-    id: '2',
-    name: 'Fisika',
-    code: 'FIS12',
-    teacherId: '1',
-  },
-  {
-    id: '3',
-    name: 'Kimia',
-    code: 'KIM12',
-    teacherId: '2',
-  },
-];
-
-const initialSchedules: Schedule[] = [
-  {
-    id: '1',
-    subjectId: '1',
-    teacherId: '1',
-    class: 'XII IPA 1',
-    dayOfWeek: 'Senin',
-    startTime: '08:00',
-    endTime: '09:30',
-    roomNumber: 'R101',
-  },
-  {
-    id: '2',
-    subjectId: '2',
-    teacherId: '1',
-    class: 'XII IPA 1',
-    dayOfWeek: 'Selasa',
-    startTime: '10:00',
-    endTime: '11:30',
-    roomNumber: 'R102',
-  },
-];
-
-const initialAttendances: Attendance[] = [
-  {
-    id: '1',
-    studentId: '1',
-    scheduleId: '1',
-    subjectId: '1',
-    date: '2025-05-03',
-    status: 'present',
-    timestamp: '2025-05-03T08:15:00Z',
-  },
-  {
-    id: '2',
-    studentId: '2',
-    scheduleId: '1',
-    subjectId: '1',
-    date: '2025-05-03',
-    status: 'present',
-    timestamp: '2025-05-03T08:12:00Z',
-  },
-];
-
-// Local storage keys
-const STORAGE_KEYS = {
-  STUDENTS: 'attendance_students',
-  TEACHERS: 'attendance_teachers',
-  ADMINS: 'attendance_admins',
-  USERS: 'attendance_users',
-  SUBJECTS: 'attendance_subjects',
-  SCHEDULES: 'attendance_schedules',
-  ATTENDANCES: 'attendance_records',
-  CURRENT_USER: 'attendance_current_user',
-};
-
-// Helper functions to interact with localStorage
-const getItem = <T>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error getting item from localStorage: ${key}`, error);
-    return defaultValue;
-  }
-};
-
-const setItem = <T>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error setting item in localStorage: ${key}`, error);
-  }
-};
-
-// Initialize data in localStorage if it doesn't exist
-const initializeStorage = () => {
-  if (!localStorage.getItem(STORAGE_KEYS.STUDENTS)) {
-    setItem(STORAGE_KEYS.STUDENTS, initialStudents);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.TEACHERS)) {
-    setItem(STORAGE_KEYS.TEACHERS, initialTeachers);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.ADMINS)) {
-    setItem(STORAGE_KEYS.ADMINS, initialAdmins);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-    setItem(STORAGE_KEYS.USERS, initialUsers);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.SUBJECTS)) {
-    setItem(STORAGE_KEYS.SUBJECTS, initialSubjects);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.SCHEDULES)) {
-    setItem(STORAGE_KEYS.SCHEDULES, initialSchedules);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCES)) {
-    setItem(STORAGE_KEYS.ATTENDANCES, initialAttendances);
-  }
-};
-
-// Initialize on module load
-initializeStorage();
-
-// Generic CRUD operations
-const getAll = <T>(storageKey: string): T[] => {
-  return getItem<T[]>(storageKey, []);
-};
-
-const getById = <T extends { id: string }>(storageKey: string, id: string): T | undefined => {
-  const items = getItem<T[]>(storageKey, []);
-  return items.find(item => item.id === id);
-};
-
-const create = <T extends { id?: string }>(storageKey: string, item: Omit<T, 'id'>): T => {
-  const items = getItem<T[]>(storageKey, []);
-  const newItem = { 
-    ...item, 
-    id: `${Date.now()}` 
-  } as T;
+// Generic CRUD operations using Supabase
+const getAll = async <T>(table: string): Promise<T[]> => {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*');
   
-  setItem(storageKey, [...items, newItem]);
-  return newItem;
+  if (error) handleSupabaseError(error, `fetching all from ${table}`);
+  return data || [];
 };
 
-const update = <T extends { id: string }>(storageKey: string, id: string, item: Omit<T, 'id'>): T => {
-  const items = getItem<T[]>(storageKey, []);
-  const updatedItems = items.map(existingItem => 
-    existingItem.id === id ? { ...item, id } as T : existingItem
-  );
+const getById = async <T>(table: string, id: string): Promise<T | null> => {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .eq('id', id)
+    .single();
   
-  setItem(storageKey, updatedItems);
-  return { ...item, id } as T;
+  if (error && error.code !== 'PGRST116') { // Ignore not found error
+    handleSupabaseError(error, `fetching by id from ${table}`);
+  }
+  
+  return data || null;
 };
 
-const remove = (storageKey: string, id: string): void => {
-  const items = getItem<Array<{ id: string }>>(storageKey, []);
-  const filteredItems = items.filter(item => item.id !== id);
-  setItem(storageKey, filteredItems);
+const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'id'>): Promise<T> => {
+  const { data, error } = await supabase
+    .from(table)
+    .insert([item])
+    .select()
+    .single();
+  
+  if (error) handleSupabaseError(error, `creating in ${table}`);
+  return data as T;
+};
+
+const update = async <T extends { id: string }>(table: string, id: string, item: Omit<T, 'id'>): Promise<T> => {
+  const { data, error } = await supabase
+    .from(table)
+    .update(item)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) handleSupabaseError(error, `updating in ${table}`);
+  return data as T;
+};
+
+const remove = async (table: string, id: string): Promise<void> => {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id);
+  
+  if (error) handleSupabaseError(error, `deleting from ${table}`);
 };
 
 // Authentication functions
-const authenticateUser = (email: string, password: string): User | null => {
-  const users = getAll<User>(STORAGE_KEYS.USERS);
-  const user = users.find(u => u.email === email);
+const authenticateUser = async (email: string, password: string): Promise<User | null> => {
+  // First try to find the user by email
+  const { data: users, error: userError } = await supabase
+    .from(TABLES.USERS)
+    .select('*')
+    .eq('email', email)
+    .single();
   
-  if (!user) return null;
+  if (userError && userError.code !== 'PGRST116') {
+    handleSupabaseError(userError, 'authentication');
+    return null;
+  }
   
-  // Check password based on role
+  if (!users) return null;
+  
+  // Now verify password based on role
   let isValid = false;
+  const user = users as User;
+  
   if (user.role === 'student') {
-    const student = getById<Student>(STORAGE_KEYS.STUDENTS, user.roleId || '');
+    const student = await getById<Student>(TABLES.STUDENTS, user.roleId || '');
     isValid = student?.password === password;
   } else if (user.role === 'teacher') {
-    const teacher = getById<Teacher>(STORAGE_KEYS.TEACHERS, user.roleId || '');
+    const teacher = await getById<Teacher>(TABLES.TEACHERS, user.roleId || '');
     isValid = teacher?.password === password;
   } else if (user.role === 'admin') {
-    const admin = getById<Admin>(STORAGE_KEYS.ADMINS, user.roleId || '');
+    const admin = await getById<Admin>(TABLES.ADMINS, user.roleId || '');
     isValid = admin?.password === password;
   }
   
   if (isValid) {
-    // Store current user in localStorage
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    // Store current user in localStorage for session management
+    localStorage.setItem('attendance_current_user', JSON.stringify(user));
     return user;
   }
   
@@ -276,43 +110,71 @@ const authenticateUser = (email: string, password: string): User | null => {
 };
 
 const getCurrentUser = (): User | null => {
-  const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  const userJson = localStorage.getItem('attendance_current_user');
   return userJson ? JSON.parse(userJson) : null;
 };
 
 const logoutUser = (): void => {
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  localStorage.removeItem('attendance_current_user');
 };
 
-// Specific data access methods
+// Function to seed initial data
+const seedInitialData = async () => {
+  try {
+    // Check if students table has data
+    const { count: studentCount } = await supabase
+      .from(TABLES.STUDENTS)
+      .select('*', { count: 'exact', head: true });
+    
+    if (!studentCount || studentCount === 0) {
+      // Insert initial data
+      await supabase.from(TABLES.STUDENTS).insert(initialStudents);
+      await supabase.from(TABLES.TEACHERS).insert(initialTeachers);
+      await supabase.from(TABLES.ADMINS).insert(initialAdmins);
+      await supabase.from(TABLES.USERS).insert(initialUsers);
+      await supabase.from(TABLES.SUBJECTS).insert(initialSubjects);
+      await supabase.from(TABLES.SCHEDULES).insert(initialSchedules);
+      await supabase.from(TABLES.ATTENDANCES).insert(initialAttendances);
+      
+      console.log('Initial data seeded successfully');
+    }
+  } catch (error) {
+    console.error('Error seeding initial data:', error);
+  }
+};
+
+// Export the database service
 export const dbService = {
+  // Initialization
+  initDatabase: seedInitialData,
+  
   // Student operations
-  getAllStudents: () => getAll<Student>(STORAGE_KEYS.STUDENTS),
-  getStudentById: (id: string) => getById<Student>(STORAGE_KEYS.STUDENTS, id),
-  createStudent: (student: Omit<Student, 'id'>) => create<Student>(STORAGE_KEYS.STUDENTS, student),
-  updateStudent: (id: string, student: Omit<Student, 'id'>) => update<Student>(STORAGE_KEYS.STUDENTS, id, student),
-  deleteStudent: (id: string) => remove(STORAGE_KEYS.STUDENTS, id),
+  getAllStudents: () => getAll<Student>(TABLES.STUDENTS),
+  getStudentById: (id: string) => getById<Student>(TABLES.STUDENTS, id),
+  createStudent: (student: Omit<Student, 'id'>) => create<Student>(TABLES.STUDENTS, student),
+  updateStudent: (id: string, student: Omit<Student, 'id'>) => update<Student>(TABLES.STUDENTS, id, student),
+  deleteStudent: (id: string) => remove(TABLES.STUDENTS, id),
   
   // Teacher operations
-  getAllTeachers: () => getAll<Teacher>(STORAGE_KEYS.TEACHERS),
-  getTeacherById: (id: string) => getById<Teacher>(STORAGE_KEYS.TEACHERS, id),
-  createTeacher: (teacher: Omit<Teacher, 'id'>) => create<Teacher>(STORAGE_KEYS.TEACHERS, teacher),
-  updateTeacher: (id: string, teacher: Omit<Teacher, 'id'>) => update<Teacher>(STORAGE_KEYS.TEACHERS, id, teacher),
-  deleteTeacher: (id: string) => remove(STORAGE_KEYS.TEACHERS, id),
+  getAllTeachers: () => getAll<Teacher>(TABLES.TEACHERS),
+  getTeacherById: (id: string) => getById<Teacher>(TABLES.TEACHERS, id),
+  createTeacher: (teacher: Omit<Teacher, 'id'>) => create<Teacher>(TABLES.TEACHERS, teacher),
+  updateTeacher: (id: string, teacher: Omit<Teacher, 'id'>) => update<Teacher>(TABLES.TEACHERS, id, teacher),
+  deleteTeacher: (id: string) => remove(TABLES.TEACHERS, id),
   
   // Admin operations
-  getAllAdmins: () => getAll<Admin>(STORAGE_KEYS.ADMINS),
-  getAdminById: (id: string) => getById<Admin>(STORAGE_KEYS.ADMINS, id),
-  createAdmin: (admin: Omit<Admin, 'id'>) => create<Admin>(STORAGE_KEYS.ADMINS, admin),
-  updateAdmin: (id: string, admin: Omit<Admin, 'id'>) => update<Admin>(STORAGE_KEYS.ADMINS, id, admin),
-  deleteAdmin: (id: string) => remove(STORAGE_KEYS.ADMINS, id),
+  getAllAdmins: () => getAll<Admin>(TABLES.ADMINS),
+  getAdminById: (id: string) => getById<Admin>(TABLES.ADMINS, id),
+  createAdmin: (admin: Omit<Admin, 'id'>) => create<Admin>(TABLES.ADMINS, admin),
+  updateAdmin: (id: string, admin: Omit<Admin, 'id'>) => update<Admin>(TABLES.ADMINS, id, admin),
+  deleteAdmin: (id: string) => remove(TABLES.ADMINS, id),
   
   // User operations
-  getAllUsers: () => getAll<User>(STORAGE_KEYS.USERS),
-  getUserById: (id: string) => getById<User>(STORAGE_KEYS.USERS, id),
-  createUser: (user: Omit<User, 'id'>) => create<User>(STORAGE_KEYS.USERS, user),
-  updateUser: (id: string, user: Omit<User, 'id'>) => update<User>(STORAGE_KEYS.USERS, id, user),
-  deleteUser: (id: string) => remove(STORAGE_KEYS.USERS, id),
+  getAllUsers: () => getAll<User>(TABLES.USERS),
+  getUserById: (id: string) => getById<User>(TABLES.USERS, id),
+  createUser: (user: Omit<User, 'id'>) => create<User>(TABLES.USERS, user),
+  updateUser: (id: string, user: Omit<User, 'id'>) => update<User>(TABLES.USERS, id, user),
+  deleteUser: (id: string) => remove(TABLES.USERS, id),
   
   // Authentication
   login: authenticateUser,
@@ -320,69 +182,93 @@ export const dbService = {
   getCurrentUser,
   
   // Subject operations
-  getAllSubjects: () => getAll<Subject>(STORAGE_KEYS.SUBJECTS),
-  getSubjectById: (id: string) => getById<Subject>(STORAGE_KEYS.SUBJECTS, id),
-  createSubject: (subject: Omit<Subject, 'id'>) => create<Subject>(STORAGE_KEYS.SUBJECTS, subject),
-  updateSubject: (id: string, subject: Omit<Subject, 'id'>) => update<Subject>(STORAGE_KEYS.SUBJECTS, id, subject),
-  deleteSubject: (id: string) => remove(STORAGE_KEYS.SUBJECTS, id),
+  getAllSubjects: () => getAll<Subject>(TABLES.SUBJECTS),
+  getSubjectById: (id: string) => getById<Subject>(TABLES.SUBJECTS, id),
+  createSubject: (subject: Omit<Subject, 'id'>) => create<Subject>(TABLES.SUBJECTS, subject),
+  updateSubject: (id: string, subject: Omit<Subject, 'id'>) => update<Subject>(TABLES.SUBJECTS, id, subject),
+  deleteSubject: (id: string) => remove(TABLES.SUBJECTS, id),
   
   // Schedule operations
-  getAllSchedules: () => getAll<Schedule>(STORAGE_KEYS.SCHEDULES),
-  getScheduleById: (id: string) => getById<Schedule>(STORAGE_KEYS.SCHEDULES, id),
-  createSchedule: (schedule: Omit<Schedule, 'id'>) => create<Schedule>(STORAGE_KEYS.SCHEDULES, schedule),
-  updateSchedule: (id: string, schedule: Omit<Schedule, 'id'>) => update<Schedule>(STORAGE_KEYS.SCHEDULES, id, schedule),
-  deleteSchedule: (id: string) => remove(STORAGE_KEYS.SCHEDULES, id),
+  getAllSchedules: () => getAll<Schedule>(TABLES.SCHEDULES),
+  getScheduleById: (id: string) => getById<Schedule>(TABLES.SCHEDULES, id),
+  createSchedule: (schedule: Omit<Schedule, 'id'>) => create<Schedule>(TABLES.SCHEDULES, schedule),
+  updateSchedule: (id: string, schedule: Omit<Schedule, 'id'>) => update<Schedule>(TABLES.SCHEDULES, id, schedule),
+  deleteSchedule: (id: string) => remove(TABLES.SCHEDULES, id),
   
   // Attendance operations
-  getAllAttendances: () => getAll<Attendance>(STORAGE_KEYS.ATTENDANCES),
-  getAttendanceById: (id: string) => getById<Attendance>(STORAGE_KEYS.ATTENDANCES, id),
-  createAttendance: (attendance: Omit<Attendance, 'id'>) => create<Attendance>(STORAGE_KEYS.ATTENDANCES, attendance),
-  updateAttendance: (id: string, attendance: Omit<Attendance, 'id'>) => update<Attendance>(STORAGE_KEYS.ATTENDANCES, id, attendance),
-  deleteAttendance: (id: string) => remove(STORAGE_KEYS.ATTENDANCES, id),
+  getAllAttendances: () => getAll<Attendance>(TABLES.ATTENDANCES),
+  getAttendanceById: (id: string) => getById<Attendance>(TABLES.ATTENDANCES, id),
+  createAttendance: (attendance: Omit<Attendance, 'id'>) => create<Attendance>(TABLES.ATTENDANCES, attendance),
+  updateAttendance: (id: string, attendance: Omit<Attendance, 'id'>) => update<Attendance>(TABLES.ATTENDANCES, id, attendance),
+  deleteAttendance: (id: string) => remove(TABLES.ATTENDANCES, id),
   
   // Helper methods for attendance
-  getAttendancesBySchedule: (scheduleId: string) => {
-    const attendances = getAll<Attendance>(STORAGE_KEYS.ATTENDANCES);
-    return attendances.filter(a => a.scheduleId === scheduleId);
+  getAttendancesBySchedule: async (scheduleId: string) => {
+    const { data, error } = await supabase
+      .from(TABLES.ATTENDANCES)
+      .select('*')
+      .eq('scheduleId', scheduleId);
+      
+    if (error) handleSupabaseError(error, 'fetching attendances by schedule');
+    return data || [];
   },
   
-  getAttendancesByStudent: (studentId: string) => {
-    const attendances = getAll<Attendance>(STORAGE_KEYS.ATTENDANCES);
-    return attendances.filter(a => a.studentId === studentId);
+  getAttendancesByStudent: async (studentId: string) => {
+    const { data, error } = await supabase
+      .from(TABLES.ATTENDANCES)
+      .select('*')
+      .eq('studentId', studentId);
+      
+    if (error) handleSupabaseError(error, 'fetching attendances by student');
+    return data || [];
   },
   
-  getAttendancesByDate: (date: string) => {
-    const attendances = getAll<Attendance>(STORAGE_KEYS.ATTENDANCES);
-    return attendances.filter(a => a.date === date);
+  getAttendancesByDate: async (date: string) => {
+    const { data, error } = await supabase
+      .from(TABLES.ATTENDANCES)
+      .select('*')
+      .eq('date', date);
+      
+    if (error) handleSupabaseError(error, 'fetching attendances by date');
+    return data || [];
   },
   
   // Report generation and export
-  getAttendanceReport: (startDate: string, endDate: string, subjectId?: string, studentId?: string) => {
-    const attendances = getAll<Attendance>(STORAGE_KEYS.ATTENDANCES);
-    let filteredAttendances = attendances.filter(a => {
-      const date = a.date;
-      return date >= startDate && date <= endDate;
-    });
+  getAttendanceReport: async (startDate: string, endDate: string, subjectId?: string, studentId?: string) => {
+    let query = supabase
+      .from(TABLES.ATTENDANCES)
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate);
     
     if (subjectId) {
-      filteredAttendances = filteredAttendances.filter(a => a.subjectId === subjectId);
+      query = query.eq('subjectId', subjectId);
     }
     
     if (studentId) {
-      filteredAttendances = filteredAttendances.filter(a => a.studentId === studentId);
+      query = query.eq('studentId', studentId);
     }
     
-    return filteredAttendances;
+    const { data, error } = await query;
+    
+    if (error) handleSupabaseError(error, 'generating attendance report');
+    return data || [];
   },
   
   // Reset data (for testing)
-  resetData: () => {
-    setItem(STORAGE_KEYS.STUDENTS, initialStudents);
-    setItem(STORAGE_KEYS.TEACHERS, initialTeachers);
-    setItem(STORAGE_KEYS.ADMINS, initialAdmins);
-    setItem(STORAGE_KEYS.USERS, initialUsers);
-    setItem(STORAGE_KEYS.SUBJECTS, initialSubjects);
-    setItem(STORAGE_KEYS.SCHEDULES, initialSchedules);
-    setItem(STORAGE_KEYS.ATTENDANCES, initialAttendances);
+  resetData: async () => {
+    try {
+      await supabase.from(TABLES.ATTENDANCES).delete().neq('id', '0');
+      await supabase.from(TABLES.SCHEDULES).delete().neq('id', '0');
+      await supabase.from(TABLES.SUBJECTS).delete().neq('id', '0');
+      await supabase.from(TABLES.USERS).delete().neq('id', '0');
+      await supabase.from(TABLES.ADMINS).delete().neq('id', '0');
+      await supabase.from(TABLES.TEACHERS).delete().neq('id', '0');
+      await supabase.from(TABLES.STUDENTS).delete().neq('id', '0');
+      
+      await seedInitialData();
+    } catch (error) {
+      console.error('Error resetting data:', error);
+    }
   },
 };

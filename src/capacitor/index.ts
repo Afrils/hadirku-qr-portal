@@ -5,9 +5,9 @@ import { platformDbAdapter } from '../services/platformDbAdapter';
 /**
  * Initialize Capacitor and platform-specific features
  */
-export const initCapacitor = () => {
+export const initCapacitor = async () => {
   // Initialize platform database adapter
-  platformDbAdapter.init();
+  await platformDbAdapter.init();
   
   console.log("Running on: ", Capacitor.getPlatform());
   
