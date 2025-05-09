@@ -9,7 +9,8 @@ import {
   initialAdmins,
   initialSubjects,
   initialSchedules,
-  initialAttendances
+  initialAttendances,
+  initialUsers
 } from './initialData';
 
 // Generic CRUD operations using Supabase
@@ -95,7 +96,7 @@ const authenticateUser = async (email: string, password: string): Promise<User |
       if (error.code === 'PGRST116') { // Not found
         console.log('User not found:', email);
         
-        // Try admin@example.com with password123 as a fallback for testing
+        // Try demo credentials as a fallback for testing
         if (email === 'admin@example.com' && password === 'admin123') {
           console.log('Using demo admin fallback');
           return {
@@ -107,6 +108,33 @@ const authenticateUser = async (email: string, password: string): Promise<User |
             roleId: '1'
           };
         }
+        
+        // Teacher demo account
+        if (email === 'siti.rahayu@example.com' && password === '123456') {
+          console.log('Using demo teacher fallback');
+          return {
+            id: 'teacher-1',
+            name: 'Siti Rahayu',
+            email: 'siti.rahayu@example.com',
+            password: '123456',
+            role: 'teacher',
+            roleId: '1'
+          };
+        }
+        
+        // Student demo account
+        if (email === 'ahmad.farizi@example.com' && password === '123456') {
+          console.log('Using demo student fallback');
+          return {
+            id: 'student-1',
+            name: 'Ahmad Farizi',
+            email: 'ahmad.farizi@example.com',
+            password: '123456',
+            role: 'student',
+            roleId: '1'
+          };
+        }
+        
         return null;
       }
       console.error('Authentication error:', error);

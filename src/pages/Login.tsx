@@ -29,7 +29,10 @@ const Login = () => {
     try {
       const success = await login(email, password);
       if (success) {
+        toast.success(`Berhasil login sebagai ${success.role}`);
         navigate('/');
+      } else {
+        toast.error('Email atau password salah');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -111,10 +114,12 @@ const Login = () => {
               </form>
             )}
           </CardContent>
-          <CardFooter className="flex justify-center">
-            <div className="text-xs text-center text-gray-500">
-              <p>Demo Credentials:</p>
-              <p>Email: admin@example.com | Password: admin123</p>
+          <CardFooter className="flex flex-col items-center">
+            <div className="text-xs text-center text-gray-500 space-y-1">
+              <p className="font-medium">Demo Credentials:</p>
+              <p><strong>Admin:</strong> admin@example.com | Password: admin123</p>
+              <p><strong>Guru:</strong> siti.rahayu@example.com | Password: 123456</p>
+              <p><strong>Murid:</strong> ahmad.farizi@example.com | Password: 123456</p>
             </div>
           </CardFooter>
         </Card>
