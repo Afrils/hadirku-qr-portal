@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./contexts/AppContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import MainLayout from "./components/MainLayout";
 
@@ -40,88 +41,98 @@ const ProtectedRoute = ({ children, roles = [] }: { children: JSX.Element, roles
 const AppRoutes = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/students" element={
-          <ProtectedRoute roles={['admin', 'teacher']}>
-            <MainLayout>
-              <Students />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/teachers" element={
-          <ProtectedRoute roles={['admin']}>
-            <MainLayout>
-              <Teachers />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/subjects" element={
-          <ProtectedRoute roles={['admin', 'teacher']}>
-            <MainLayout>
-              <Subjects />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/schedules" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Schedules />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/qr-generator" element={
-          <ProtectedRoute roles={['admin', 'teacher']}>
-            <MainLayout>
-              <QRGenerator />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/attendance" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Attendance />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/reports" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Reports />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="*" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <NotFound />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Dashboard />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/students" element={
+            <ProtectedRoute roles={['admin', 'teacher']}>
+              <MainLayout>
+                <Students />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/teachers" element={
+            <ProtectedRoute roles={['admin']}>
+              <MainLayout>
+                <Teachers />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/subjects" element={
+            <ProtectedRoute roles={['admin', 'teacher']}>
+              <MainLayout>
+                <Subjects />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/schedules" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Schedules />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/qr-generator" element={
+            <ProtectedRoute roles={['admin', 'teacher']}>
+              <MainLayout>
+                <QRGenerator />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/attendance" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Attendance />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Reports />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <NotFound />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 };
 
 const App = () => {
   // Fix: Create QueryClient instance inside the component
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    },
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
