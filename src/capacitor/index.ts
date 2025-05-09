@@ -1,14 +1,10 @@
 
 import { Capacitor } from '@capacitor/core';
-import { platformDbAdapter } from '../services/platformDbAdapter';
 
 /**
  * Initialize Capacitor and platform-specific features
  */
 export const initCapacitor = async () => {
-  // Initialize platform database adapter
-  await platformDbAdapter.init();
-  
   console.log("Running on: ", Capacitor.getPlatform());
   
   // Check if we're running on Android
@@ -24,21 +20,17 @@ export const initCapacitor = async () => {
 function setupAndroidSpecifics() {
   // Add Android-specific configurations here
   // For example, handle back button, status bar, etc.
-  
-  // Set up periodic sync with the server if needed
-  setupPeriodicSync();
 }
 
 /**
  * Set up periodic data synchronization
- * This would sync local database with remote server
+ * This function is kept for potential future implementation
  */
 function setupPeriodicSync() {
   // Set up a periodic sync every 5 minutes
   setInterval(async () => {
     try {
-      await platformDbAdapter.syncWithRemote();
-      console.log('Data sync completed successfully');
+      console.log('Data sync would happen here if implemented');
     } catch (error) {
       console.error('Error syncing data:', error);
     }
