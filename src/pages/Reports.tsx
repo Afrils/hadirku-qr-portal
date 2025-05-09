@@ -22,10 +22,18 @@ const Reports: React.FC = () => {
   const [dateTo, setDateTo] = useState<string>('');
 
   useEffect(() => {
-    // Load all attendance records
-    const allAttendances = dbService.getAllAttendances();
-    setAttendances(allAttendances);
-    setFilteredAttendances(allAttendances);
+    // Load all attendance records - properly handling the promise
+    const loadAttendances = async () => {
+      try {
+        const allAttendances = await dbService.getAllAttendances();
+        setAttendances(allAttendances);
+        setFilteredAttendances(allAttendances);
+      } catch (error) {
+        console.error('Error loading attendance data:', error);
+      }
+    };
+    
+    loadAttendances();
   }, []);
 
   const handleFilter = () => {

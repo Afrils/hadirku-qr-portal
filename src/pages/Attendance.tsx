@@ -26,12 +26,18 @@ const AttendancePage = () => {
     loadData();
   }, []);
   
-  const loadData = () => {
-    const studentData = dbService.getAllStudents();
-    const attendanceData = dbService.getAllAttendances();
-    setStudents(studentData);
-    setAttendances(attendanceData);
-    setFilteredAttendances(attendanceData);
+  const loadData = async () => {
+    try {
+      const studentData = await dbService.getAllStudents();
+      const attendanceData = await dbService.getAllAttendances();
+      
+      setStudents(studentData);
+      setAttendances(attendanceData);
+      setFilteredAttendances(attendanceData);
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+      toast.error('Gagal memuat data presensi');
+    }
   };
   
   // Filter schedules based on selected subject

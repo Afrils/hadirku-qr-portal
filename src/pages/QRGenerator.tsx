@@ -45,12 +45,13 @@ const QRGeneratorPage = () => {
       setQrCodeData(qrData);
       
       // Create a test attendance record when QR is generated (simulating scanning)
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
-          // Create attendance records for students
-          const students = dbService.getAllStudents().slice(0, 2); // Just use first two students
+          // Create attendance records for students - properly handling the promise
+          const students = await dbService.getAllStudents();
+          const sampleStudents = students.slice(0, 2); // Just use first two students
           
-          students.forEach((student, index) => {
+          sampleStudents.forEach((student, index) => {
             const delay = index * 2000; // Stagger the attendance records by 2 seconds
             
             setTimeout(() => {
