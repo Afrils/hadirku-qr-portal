@@ -1,6 +1,7 @@
 
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
-import { supabase, TABLES, handleSupabaseError } from './supabaseClient';
+import { supabase, TABLES } from './supabaseClient';
+import { handleSupabaseError } from './supabaseClient';
 
 // Import the initial data (we'll use this for the first time setup or when resetting)
 import {
@@ -9,8 +10,7 @@ import {
   initialAdmins,
   initialSubjects,
   initialSchedules,
-  initialAttendances,
-  initialUsers
+  initialAttendances
 } from './initialData';
 
 // Generic CRUD operations using Supabase
@@ -84,60 +84,55 @@ const authenticateUser = async (email: string, password: string): Promise<User |
   try {
     console.log(`Attempting to authenticate user with email: ${email}`);
     
-    // For now, we'll do a direct password comparison
-    // In a production app, we would hash the passwords
+    // For now, we'll do a direct password comparison in the users table
     const { data: users, error } = await supabase
-      .from(TABLES.USERS)
+      .from('users')
       .select('*')
       .eq('email', email)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') { // Not found
-        console.log('User not found:', email);
-        
-        // Try demo credentials as a fallback for testing
-        if (email === 'admin@example.com' && password === 'admin123') {
-          console.log('Using demo admin fallback');
-          return {
-            id: 'admin-1',
-            name: 'Admin Utama',
-            email: 'admin@example.com',
-            password: 'admin123',
-            role: 'admin',
-            roleId: '1'
-          };
-        }
-        
-        // Teacher demo account
-        if (email === 'siti.rahayu@example.com' && password === '123456') {
-          console.log('Using demo teacher fallback');
-          return {
-            id: 'teacher-1',
-            name: 'Siti Rahayu',
-            email: 'siti.rahayu@example.com',
-            password: '123456',
-            role: 'teacher',
-            roleId: '1'
-          };
-        }
-        
-        // Student demo account
-        if (email === 'ahmad.farizi@example.com' && password === '123456') {
-          console.log('Using demo student fallback');
-          return {
-            id: 'student-1',
-            name: 'Ahmad Farizi',
-            email: 'ahmad.farizi@example.com',
-            password: '123456',
-            role: 'student',
-            roleId: '1'
-          };
-        }
-        
-        return null;
-      }
       console.error('Authentication error:', error);
+      
+      // Try demo credentials as a fallback for testing
+      if (email === 'admin@example.com' && password === 'admin123') {
+        console.log('Using demo admin fallback');
+        return {
+          id: 'admin-1',
+          name: 'Admin Utama',
+          email: 'admin@example.com',
+          password: 'admin123',
+          role: 'admin',
+          roleId: '1'
+        };
+      }
+      
+      // Teacher demo account
+      if (email === 'siti.rahayu@example.com' && password === '123456') {
+        console.log('Using demo teacher fallback');
+        return {
+          id: 'teacher-1',
+          name: 'Siti Rahayu',
+          email: 'siti.rahayu@example.com',
+          password: '123456',
+          role: 'teacher',
+          roleId: '1'
+        };
+      }
+      
+      // Student demo account
+      if (email === 'ahmad.farizi@example.com' && password === '123456') {
+        console.log('Using demo student fallback');
+        return {
+          id: 'student-1',
+          name: 'Ahmad Farizi',
+          email: 'ahmad.farizi@example.com',
+          password: '123456',
+          role: 'student',
+          roleId: '1'
+        };
+      }
+      
       return null;
     }
 
@@ -196,7 +191,33 @@ const seedInitialData = async () => {
       await supabase.from(TABLES.TEACHERS).insert(initialTeachers);
       console.log('Teachers created');
       
-      await supabase.from(TABLES.USERS).insert(initialUsers);
+      // Creating users based on admin, teachers, and students
+      const admins = initialAdmins.map(admin => ({
+        name: admin.name,
+        email: admin.email,
+        password: admin.password,
+        role: 'admin',
+        roleId: admin.id
+      }));
+      
+      const teachers = initialTeachers.map(teacher => ({
+        name: teacher.name,
+        email: teacher.email,
+        password: teacher.password || '123456',
+        role: 'teacher',
+        roleId: teacher.id
+      }));
+      
+      const students = initialStudents.map(student => ({
+        name: student.name,
+        email: student.email,
+        password: student.password || '123456',
+        role: 'student',
+        roleId: student.id
+      }));
+      
+      const allUsers = [...admins, ...teachers, ...students];
+      await supabase.from(TABLES.USERS).insert(allUsers);
       console.log('Users created');
       
       await supabase.from(TABLES.SUBJECTS).insert(initialSubjects);

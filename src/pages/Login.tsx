@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import DatabaseError from '@/components/DatabaseError';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -27,9 +28,9 @@ const Login = () => {
     setIsLoggingIn(true);
     
     try {
-      const success = await login(email, password);
-      if (success) {
-        toast.success(`Berhasil login sebagai ${success.role}`);
+      const user = await login(email, password);
+      if (user) {
+        toast.success(`Berhasil login sebagai ${user.role}`);
         navigate('/');
       } else {
         toast.error('Email atau password salah');
@@ -117,6 +118,7 @@ const Login = () => {
           <CardFooter className="flex flex-col items-center">
             <div className="text-xs text-center text-gray-500 space-y-1">
               <p className="font-medium">Demo Credentials:</p>
+              <p><strong>Admin:</strong> andikabgs@gmail.com | Password: G4l4xymini</p>
               <p><strong>Admin:</strong> admin@example.com | Password: admin123</p>
               <p><strong>Guru:</strong> siti.rahayu@example.com | Password: 123456</p>
               <p><strong>Murid:</strong> ahmad.farizi@example.com | Password: 123456</p>

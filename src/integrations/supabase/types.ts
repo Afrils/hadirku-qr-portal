@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admins: {
+        Row: {
+          email: string
+          id: string
+          name: string
+          password: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          name: string
+          password: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          name?: string
+          password?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           created_at: string | null
@@ -47,6 +68,58 @@ export type Database = {
           },
         ]
       }
+      attendances: {
+        Row: {
+          date: string
+          id: string
+          schedule_id: string | null
+          status: string
+          student_id: string | null
+          subject_id: string | null
+          timestamp: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          schedule_id?: string | null
+          status: string
+          student_id?: string | null
+          subject_id?: string | null
+          timestamp: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          schedule_id?: string | null
+          status?: string
+          student_id?: string | null
+          subject_id?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendances_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           class: string | null
@@ -77,6 +150,164 @@ export type Database = {
           role?: string
           subject?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          class: string
+          day_of_week: string
+          end_time: string
+          id: string
+          room_number: string
+          start_time: string
+          subject_id: string | null
+          teacher_id: string | null
+        }
+        Insert: {
+          class: string
+          day_of_week: string
+          end_time: string
+          id?: string
+          room_number: string
+          start_time: string
+          subject_id?: string | null
+          teacher_id?: string | null
+        }
+        Update: {
+          class?: string
+          day_of_week?: string
+          end_time?: string
+          id?: string
+          room_number?: string
+          start_time?: string
+          subject_id?: string | null
+          teacher_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          class: string
+          email: string
+          id: string
+          name: string
+          password: string
+          student_id: string
+        }
+        Insert: {
+          class: string
+          email: string
+          id?: string
+          name: string
+          password: string
+          student_id: string
+        }
+        Update: {
+          class?: string
+          email?: string
+          id?: string
+          name?: string
+          password?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          code: string
+          id: string
+          name: string
+          teacher_id: string | null
+        }
+        Insert: {
+          code: string
+          id?: string
+          name: string
+          teacher_id?: string | null
+        }
+        Update: {
+          code?: string
+          id?: string
+          name?: string
+          teacher_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          email: string
+          id: string
+          name: string
+          password: string
+          subjects: string[] | null
+          teacher_id: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          name: string
+          password: string
+          subjects?: string[] | null
+          teacher_id: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          name?: string
+          password?: string
+          subjects?: string[] | null
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          email: string
+          id: string
+          name: string
+          password: string
+          role: string
+          role_id: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          name: string
+          password: string
+          role: string
+          role_id: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          name?: string
+          password?: string
+          role?: string
+          role_id?: string
         }
         Relationships: []
       }
