@@ -9,6 +9,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import DatabaseError from '@/components/DatabaseError';
 import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/types/dataTypes';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -28,7 +29,7 @@ const Login = () => {
     setIsLoggingIn(true);
     
     try {
-      const user = await login(email, password);
+      const user = await login(email, password) as User | null;
       if (user && user.role) {
         toast.success(`Berhasil login sebagai ${user.role}`);
         navigate('/');
