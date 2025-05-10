@@ -1,8 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
-import * as dbService from '@/services/dbService';
+import { dbService } from '@/services/dbService';
 import { Student, Teacher, Subject, Schedule, User, Attendance } from '@/types/dataTypes';
-import { supabase } from '@/integrations/supabase/client';
 
 // Define what data/functions the context will expose
 interface AppContextType {
@@ -34,6 +34,9 @@ interface AppContextType {
   resetSession: () => void;
   lastActivityTime: number;
   updateLastActivityTime: () => void;
+  refreshData: () => Promise<void>;
+  getTeacherById: (id: string) => Promise<Teacher | null>;
+  getSubjectById: (id: string) => Promise<Subject | null>;
 }
 
 // Create the context with a default value
@@ -112,7 +115,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLoading(true);
         
         // Try to get saved user from localStorage
-        const savedUserString = localStorage.getItem('currentUser');
+        const savedUserString = localStorage.getItem('attendance_current_user');
         if (savedUserString) {
           const savedUser = JSON.parse(savedUserString);
           setCurrentUser(savedUser);
@@ -144,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateLastActivityTime();
         
         // Save user to localStorage
-        localStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.setItem('attendance_current_user', JSON.stringify(user));
         
         toast.success(`Selamat datang, ${user.name}`);
         return user;
@@ -160,11 +163,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
+    dbService.logout(); // Call dbService logout method
     setCurrentUser(null);
     setIsAuthenticated(false);
-    
-    // Clear saved user from localStorage
-    localStorage.removeItem('currentUser');
   };
 
   // Function to reset the session timeout
@@ -177,10 +178,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setIsLoading(true);
       const [studentsData, teachersData, subjectsData, schedulesData] = await Promise.all([
-        dbService.getStudents(),
-        dbService.getTeachers(),
-        dbService.getSubjects(),
-        dbService.getSchedules(),
+        dbService.getAllStudents(),
+        dbService.getAllTeachers(),
+        dbService.getAllSubjects(),
+        dbService.getAllSchedules(),
       ]);
 
       setStudents(studentsData);
@@ -198,6 +199,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Refresh data function
+  const refreshData = async () => {
+    await loadInitialData();
+    toast.success("Data berhasil diperbarui");
+  };
+
   // Function to retry database connection
   const retryDatabaseConnection = async () => {
     try {
@@ -209,11 +216,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Get entity by ID functions
+  const getTeacherById = async (id: string): Promise<Teacher | null> => {
+    return await dbService.getTeacherById(id);
+  };
+
+  const getSubjectById = async (id: string): Promise<Subject | null> => {
+    return await dbService.getSubjectById(id);
+  };
+
   // Student CRUD functions
   const addStudent = async (student: Omit<Student, 'id'>) => {
     try {
       setIsLoading(true);
-      const newStudent = await dbService.addStudent(student);
+      const newStudent = await dbService.createStudent(student);
       setStudents(prevStudents => [...prevStudents, newStudent]);
       toast.success('Siswa berhasil ditambahkan');
     } catch (error) {
@@ -258,7 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
     try {
       setIsLoading(true);
-      const newTeacher = await dbService.addTeacher(teacher);
+      const newTeacher = await dbService.createTeacher(teacher);
       setTeachers(prevTeachers => [...prevTeachers, newTeacher]);
       toast.success('Guru berhasil ditambahkan');
     } catch (error) {
@@ -303,7 +319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addSubject = async (subject: Omit<Subject, 'id'>) => {
     try {
       setIsLoading(true);
-      const newSubject = await dbService.addSubject(subject);
+      const newSubject = await dbService.createSubject(subject);
       setSubjects(prevSubjects => [...prevSubjects, newSubject]);
       toast.success('Mata pelajaran berhasil ditambahkan');
     } catch (error) {
@@ -348,7 +364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
     try {
       setIsLoading(true);
-      const newSchedule = await dbService.addSchedule(schedule);
+      const newSchedule = await dbService.createSchedule(schedule);
       setSchedules(prevSchedules => [...prevSchedules, newSchedule]);
       toast.success('Jadwal berhasil ditambahkan');
     } catch (error) {
@@ -393,11 +409,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAttendance = async (attendance: Omit<Attendance, 'id'>) => {
     try {
       setIsLoading(true);
-      // Assuming dbService.addAttendance returns the new attendance object
-      const newAttendance = await dbService.addAttendance(attendance);
-      // Update the state with the new attendance record
-      setSchedules(prevAttendances => [...prevAttendances, newAttendance]);
+      // Using the createAttendance method from dbService
+      const newAttendance = await dbService.createAttendance(attendance);
       toast.success('Absensi berhasil ditambahkan');
+      return newAttendance;
     } catch (error) {
       console.error('Failed to add attendance:', error);
       toast.error('Gagal menambahkan absensi');
@@ -435,7 +450,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     retryDatabaseConnection,
     resetSession,
     lastActivityTime,
-    updateLastActivityTime
+    updateLastActivityTime,
+    refreshData,
+    getTeacherById,
+    getSubjectById
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
