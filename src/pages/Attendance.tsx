@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +10,8 @@ import { Attendance, Student } from '@/types/dataTypes';
 import { toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
 
-const AttendancePage = () => {
-  const { subjects, schedules, refreshData } = useAppContext();
+const Attendance = () => {
+  const { refreshData, /* other context values */ } = useAppContext();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredAttendances, setFilteredAttendances] = useState<Attendance[]>([]);
@@ -219,4 +218,4 @@ const AttendancePage = () => {
   );
 };
 
-export default AttendancePage;
+export default Attendance;

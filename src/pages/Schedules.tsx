@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,8 +53,8 @@ const Schedules = () => {
     const fetchDetails = async () => {
       const details = await Promise.all(
         schedules.map(async (schedule) => {
-          const subject = await getSubjectById(schedule.subjectId);
-          const teacher = await getTeacherById(schedule.teacherId);
+          const teacher = schedule.teacherId ? await getTeacherById(schedule.teacherId) : null;
+          const subject = schedule.subjectId ? await getSubjectById(schedule.subjectId) : null;
           
           return {
             schedule,
@@ -68,7 +67,7 @@ const Schedules = () => {
     };
 
     fetchDetails();
-  }, [schedules, getSubjectById, getTeacherById]);
+  }, [schedules, getTeacherById, getSubjectById]);
 
   const resetForm = () => {
     setFormData({

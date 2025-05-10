@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +11,7 @@ import { dbService } from '@/services/dbService';
 import { toast } from '@/components/ui/sonner';
 import { Subject } from '@/types/dataTypes';
 
-const QRGeneratorPage = () => {
+const QRGenerator = () => {
   const { subjects, schedules, getSubjectById } = useAppContext();
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState('');
@@ -215,4 +214,4 @@ const QRGeneratorPage = () => {
   );
 };
 
-export default QRGeneratorPage;
+export default QRGenerator;
