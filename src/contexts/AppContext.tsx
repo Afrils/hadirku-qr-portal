@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
-import { Student, Teacher, Subject, Schedule, User } from '../types/dataTypes';
-import { dbService } from '../services/dbService';
-import { handleError } from '@/utils/errorHandler';
+import * as dbService from '@/services/dbService';
+import { Student, Teacher, Subject, Schedule, User, Attendance } from '@/types/dataTypes';
+import { supabase } from '@/integrations/supabase/client';
 
-type AppContextType = {
+// Define what data/functions the context will expose
+interface AppContextType {
   students: Student[];
   teachers: Teacher[];
   subjects: Subject[];
@@ -25,18 +26,33 @@ type AppContextType = {
   addSchedule: (schedule: Omit<Schedule, 'id'>) => void;
   updateSchedule: (id: string, schedule: Omit<Schedule, 'id'>) => void;
   deleteSchedule: (id: string) => void;
-  getTeacherById: (id: string) => Promise<Teacher | null>;
-  getSubjectById: (id: string) => Promise<Subject | null>;
-  refreshData: () => void;
+  addAttendance: (attendance: Omit<Attendance, 'id'>) => void;
   isLoading: boolean;
   hasError: boolean;
   databaseError: string | null;
   retryDatabaseConnection: () => void;
-};
+  resetSession: () => void;
+  lastActivityTime: number;
+  updateLastActivityTime: () => void;
+}
 
+// Create the context with a default value
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
+// Custom hook for using this context
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
+};
+
+// Session timeout in milliseconds (3 minutes)
+const SESSION_TIMEOUT = 3 * 60 * 1000;
+
+// Provider component that wraps app and makes context available
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -46,6 +62,77 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
   const [databaseError, setDatabaseError] = useState<string | null>(null);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+
+  // Session timeout handling
+  useEffect(() => {
+    const checkSessionTimeout = () => {
+      const currentTime = Date.now();
+      if (isAuthenticated && currentTime - lastActivityTime > SESSION_TIMEOUT) {
+        toast.info("Sesi Anda telah habis karena tidak ada aktivitas");
+        logout();
+      }
+    };
+
+    const intervalId = setInterval(checkSessionTimeout, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, lastActivityTime]);
+
+  // Update last activity time when user interacts with the app
+  const updateLastActivityTime = () => {
+    setLastActivityTime(Date.now());
+  };
+
+  // User activity listeners
+  useEffect(() => {
+    if (isAuthenticated) {
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      
+      const handleUserActivity = () => {
+        updateLastActivityTime();
+      };
+      
+      events.forEach(event => {
+        window.addEventListener(event, handleUserActivity);
+      });
+      
+      return () => {
+        events.forEach(event => {
+          window.removeEventListener(event, handleUserActivity);
+        });
+      };
+    }
+  }, [isAuthenticated]);
+
+  // Check for saved session on initial load
+  useEffect(() => {
+    const checkSavedSession = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Try to get saved user from localStorage
+        const savedUserString = localStorage.getItem('currentUser');
+        if (savedUserString) {
+          const savedUser = JSON.parse(savedUserString);
+          setCurrentUser(savedUser);
+          setIsAuthenticated(true);
+          updateLastActivityTime();
+        }
+        
+        // Load initial data
+        await loadInitialData();
+      } catch (error) {
+        console.error('Error checking saved session:', error);
+        setHasError(true);
+        setDatabaseError('Failed to load saved session data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSavedSession();
+  }, []);
 
   // Authentication functions
   const login = async (email: string, password: string): Promise<User | null> => {
@@ -54,6 +141,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         setCurrentUser(user);
         setIsAuthenticated(true);
+        updateLastActivityTime();
+        
+        // Save user to localStorage
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        
         toast.success(`Selamat datang, ${user.name}`);
         return user;
       } else {
@@ -70,307 +162,281 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setCurrentUser(null);
     setIsAuthenticated(false);
-    toast.success('Anda telah keluar dari sistem.');
+    
+    // Clear saved user from localStorage
+    localStorage.removeItem('currentUser');
   };
 
-  // Function to initialize the database
-  const initializeDatabase = async () => {
-    try {
-      await dbService.initDatabase();
-      console.log("Database initialized successfully");
-    } catch (error) {
-      console.error("Failed to initialize database:", error);
-      setDatabaseError(error instanceof Error ? error.message : "Unknown error initializing database");
-    }
+  // Function to reset the session timeout
+  const resetSession = () => {
+    updateLastActivityTime();
   };
 
-  // Load initial data
-  const loadData = async () => {
-    setIsLoading(true);
-    setHasError(false);
-    setDatabaseError(null);
-
+  // Load initial data function
+  const loadInitialData = async () => {
     try {
-      await initializeDatabase();
-      
+      setIsLoading(true);
       const [studentsData, teachersData, subjectsData, schedulesData] = await Promise.all([
-        dbService.getAllStudents().catch(err => {
-          console.error('Error fetching students:', err);
-          return [] as Student[];
-        }),
-        dbService.getAllTeachers().catch(err => {
-          console.error('Error fetching teachers:', err);
-          return [] as Teacher[];
-        }),
-        dbService.getAllSubjects().catch(err => {
-          console.error('Error fetching subjects:', err);
-          return [] as Subject[];
-        }),
-        dbService.getAllSchedules().catch(err => {
-          console.error('Error fetching schedules:', err);
-          return [] as Schedule[];
-        })
+        dbService.getStudents(),
+        dbService.getTeachers(),
+        dbService.getSubjects(),
+        dbService.getSchedules(),
       ]);
 
       setStudents(studentsData);
       setTeachers(teachersData);
       setSubjects(subjectsData);
       setSchedules(schedulesData);
-      setIsLoading(false);
+      setHasError(false);
+      setDatabaseError(null);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Failed to load initial data:', error);
       setHasError(true);
-      setDatabaseError(error instanceof Error ? error.message : 'Failed to load data from database');
+      setDatabaseError('Failed to connect to the database');
+    } finally {
       setIsLoading(false);
-      toast.error('Gagal memuat data');
     }
   };
 
   // Function to retry database connection
-  const retryDatabaseConnection = () => {
-    setIsLoading(true);
-    setHasError(false);
-    setDatabaseError(null);
-    loadData();
-  };
-
-  // Load data on component mount
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Refresh data periodically, but only if we have no errors
-  useEffect(() => {
-    let interval: number | undefined;
-    
-    if (!hasError) {
-      interval = window.setInterval(() => {
-        loadData();
-      }, 60000); // Refresh every minute instead of 30 seconds to reduce load
+  const retryDatabaseConnection = async () => {
+    try {
+      await loadInitialData();
+      toast.success('Berhasil terhubung ke database');
+    } catch (error) {
+      console.error('Retry failed:', error);
+      toast.error('Gagal menghubungkan ke database');
     }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [hasError]);
-
-  // Function to refresh all data
-  const refreshData = () => {
-    loadData();
   };
 
-  // Student functions
+  // Student CRUD functions
   const addStudent = async (student: Omit<Student, 'id'>) => {
     try {
-      await dbService.createStudent(student);
-      const updatedStudents = await dbService.getAllStudents();
-      setStudents(updatedStudents);
+      setIsLoading(true);
+      const newStudent = await dbService.addStudent(student);
+      setStudents(prevStudents => [...prevStudents, newStudent]);
       toast.success('Siswa berhasil ditambahkan');
     } catch (error) {
-      console.error('Error adding student:', error);
+      console.error('Failed to add student:', error);
       toast.error('Gagal menambahkan siswa');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const updateStudent = async (id: string, student: Omit<Student, 'id'>) => {
     try {
+      setIsLoading(true);
       await dbService.updateStudent(id, student);
-      const updatedStudents = await dbService.getAllStudents();
-      setStudents(updatedStudents);
+      setStudents(prevStudents =>
+        prevStudents.map(s => (s.id === id ? { ...s, ...student } : s))
+      );
       toast.success('Data siswa berhasil diperbarui');
     } catch (error) {
-      console.error('Error updating student:', error);
+      console.error('Failed to update student:', error);
       toast.error('Gagal memperbarui data siswa');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteStudent = async (id: string) => {
     try {
+      setIsLoading(true);
       await dbService.deleteStudent(id);
-      const updatedStudents = await dbService.getAllStudents();
-      setStudents(updatedStudents);
+      setStudents(prevStudents => prevStudents.filter(s => s.id !== id));
       toast.success('Siswa berhasil dihapus');
     } catch (error) {
-      console.error('Error deleting student:', error);
+      console.error('Failed to delete student:', error);
       toast.error('Gagal menghapus siswa');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Teacher functions
+  // Teacher CRUD functions
   const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
     try {
-      await dbService.createTeacher(teacher);
-      const updatedTeachers = await dbService.getAllTeachers();
-      setTeachers(updatedTeachers);
+      setIsLoading(true);
+      const newTeacher = await dbService.addTeacher(teacher);
+      setTeachers(prevTeachers => [...prevTeachers, newTeacher]);
       toast.success('Guru berhasil ditambahkan');
     } catch (error) {
-      console.error('Error adding teacher:', error);
+      console.error('Failed to add teacher:', error);
       toast.error('Gagal menambahkan guru');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const updateTeacher = async (id: string, teacher: Omit<Teacher, 'id'>) => {
     try {
+      setIsLoading(true);
       await dbService.updateTeacher(id, teacher);
-      const updatedTeachers = await dbService.getAllTeachers();
-      setTeachers(updatedTeachers);
+      setTeachers(prevTeachers =>
+        prevTeachers.map(t => (t.id === id ? { ...t, ...teacher } : t))
+      );
       toast.success('Data guru berhasil diperbarui');
     } catch (error) {
-      console.error('Error updating teacher:', error);
+      console.error('Failed to update teacher:', error);
       toast.error('Gagal memperbarui data guru');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteTeacher = async (id: string) => {
     try {
+      setIsLoading(true);
       await dbService.deleteTeacher(id);
-      const updatedTeachers = await dbService.getAllTeachers();
-      setTeachers(updatedTeachers);
+      setTeachers(prevTeachers => prevTeachers.filter(t => t.id !== id));
       toast.success('Guru berhasil dihapus');
     } catch (error) {
-      console.error('Error deleting teacher:', error);
+      console.error('Failed to delete teacher:', error);
       toast.error('Gagal menghapus guru');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Subject functions
+  // Subject CRUD functions
   const addSubject = async (subject: Omit<Subject, 'id'>) => {
     try {
-      await dbService.createSubject(subject);
-      const updatedSubjects = await dbService.getAllSubjects();
-      setSubjects(updatedSubjects);
+      setIsLoading(true);
+      const newSubject = await dbService.addSubject(subject);
+      setSubjects(prevSubjects => [...prevSubjects, newSubject]);
       toast.success('Mata pelajaran berhasil ditambahkan');
     } catch (error) {
-      console.error('Error adding subject:', error);
+      console.error('Failed to add subject:', error);
       toast.error('Gagal menambahkan mata pelajaran');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const updateSubject = async (id: string, subject: Omit<Subject, 'id'>) => {
     try {
+      setIsLoading(true);
       await dbService.updateSubject(id, subject);
-      const updatedSubjects = await dbService.getAllSubjects();
-      setSubjects(updatedSubjects);
-      toast.success('Mata pelajaran berhasil diperbarui');
+      setSubjects(prevSubjects =>
+        prevSubjects.map(s => (s.id === id ? { ...s, ...subject } : s))
+      );
+      toast.success('Data mata pelajaran berhasil diperbarui');
     } catch (error) {
-      console.error('Error updating subject:', error);
-      toast.error('Gagal memperbarui mata pelajaran');
-      throw error;
+      console.error('Failed to update subject:', error);
+      toast.error('Gagal memperbarui data mata pelajaran');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteSubject = async (id: string) => {
     try {
+      setIsLoading(true);
       await dbService.deleteSubject(id);
-      const updatedSubjects = await dbService.getAllSubjects();
-      setSubjects(updatedSubjects);
+      setSubjects(prevSubjects => prevSubjects.filter(s => s.id !== id));
       toast.success('Mata pelajaran berhasil dihapus');
     } catch (error) {
-      console.error('Error deleting subject:', error);
+      console.error('Failed to delete subject:', error);
       toast.error('Gagal menghapus mata pelajaran');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Schedule functions
+  // Schedule CRUD functions
   const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
     try {
-      await dbService.createSchedule(schedule);
-      const updatedSchedules = await dbService.getAllSchedules();
-      setSchedules(updatedSchedules);
+      setIsLoading(true);
+      const newSchedule = await dbService.addSchedule(schedule);
+      setSchedules(prevSchedules => [...prevSchedules, newSchedule]);
       toast.success('Jadwal berhasil ditambahkan');
     } catch (error) {
-      console.error('Error adding schedule:', error);
+      console.error('Failed to add schedule:', error);
       toast.error('Gagal menambahkan jadwal');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const updateSchedule = async (id: string, schedule: Omit<Schedule, 'id'>) => {
     try {
+      setIsLoading(true);
       await dbService.updateSchedule(id, schedule);
-      const updatedSchedules = await dbService.getAllSchedules();
-      setSchedules(updatedSchedules);
-      toast.success('Jadwal berhasil diperbarui');
+      setSchedules(prevSchedules =>
+        prevSchedules.map(s => (s.id === id ? { ...s, ...schedule } : s))
+      );
+      toast.success('Data jadwal berhasil diperbarui');
     } catch (error) {
-      console.error('Error updating schedule:', error);
-      toast.error('Gagal memperbarui jadwal');
-      throw error;
+      console.error('Failed to update schedule:', error);
+      toast.error('Gagal memperbarui data jadwal');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteSchedule = async (id: string) => {
     try {
+      setIsLoading(true);
       await dbService.deleteSchedule(id);
-      const updatedSchedules = await dbService.getAllSchedules();
-      setSchedules(updatedSchedules);
+      setSchedules(prevSchedules => prevSchedules.filter(s => s.id !== id));
       toast.success('Jadwal berhasil dihapus');
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      console.error('Failed to delete schedule:', error);
       toast.error('Gagal menghapus jadwal');
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Utility functions
-  const getTeacherById = async (id: string) => {
-    return await dbService.getTeacherById(id);
+  // Attendance functions
+  const addAttendance = async (attendance: Omit<Attendance, 'id'>) => {
+    try {
+      setIsLoading(true);
+      // Assuming dbService.addAttendance returns the new attendance object
+      const newAttendance = await dbService.addAttendance(attendance);
+      // Update the state with the new attendance record
+      setSchedules(prevAttendances => [...prevAttendances, newAttendance]);
+      toast.success('Absensi berhasil ditambahkan');
+    } catch (error) {
+      console.error('Failed to add attendance:', error);
+      toast.error('Gagal menambahkan absensi');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const getSubjectById = async (id: string) => {
-    return await dbService.getSubjectById(id);
+  // Create the context value object
+  const contextValue: AppContextType = {
+    students,
+    teachers,
+    subjects,
+    schedules,
+    currentUser,
+    login,
+    logout,
+    isAuthenticated,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    addTeacher,
+    updateTeacher,
+    deleteTeacher,
+    addSubject,
+    updateSubject,
+    deleteSubject,
+    addSchedule,
+    updateSchedule,
+    deleteSchedule,
+    addAttendance,
+    isLoading,
+    hasError,
+    databaseError,
+    retryDatabaseConnection,
+    resetSession,
+    lastActivityTime,
+    updateLastActivityTime
   };
 
-  return (
-    <AppContext.Provider
-      value={{
-        students,
-        teachers,
-        subjects,
-        schedules,
-        currentUser,
-        login,
-        logout,
-        isAuthenticated,
-        addStudent,
-        updateStudent,
-        deleteStudent,
-        addTeacher,
-        updateTeacher,
-        deleteTeacher,
-        addSubject,
-        updateSubject,
-        deleteSubject,
-        addSchedule,
-        updateSchedule,
-        deleteSchedule,
-        getTeacherById,
-        getSubjectById,
-        refreshData,
-        isLoading,
-        hasError,
-        databaseError,
-        retryDatabaseConnection
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
-};
-
-export const useAppContext = () => {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
-  return context;
+  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 };

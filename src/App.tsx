@@ -21,6 +21,7 @@ import Attendance from "./pages/Attendance";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Reports from "./pages/Reports";
+import Profile from "./pages/Profile";
 
 // Protected route wrapper
 const ProtectedRoute = ({ children, roles = [] }: { children: JSX.Element, roles?: string[] }) => {
@@ -105,6 +106,14 @@ const AppRoutes = () => {
             <ProtectedRoute>
               <MainLayout>
                 <Reports />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Profile />
               </MainLayout>
             </ProtectedRoute>
           } />

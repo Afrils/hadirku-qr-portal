@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,15 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, isLoading, hasError, databaseError, retryDatabaseConnection } = useAppContext();
+  const { login, isLoading, hasError, databaseError, retryDatabaseConnection, isAuthenticated } = useAppContext();
   const navigate = useNavigate();
+
+  // If the user is already authenticated, redirect to home
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +36,9 @@ const Login = () => {
     setIsLoggingIn(true);
     
     try {
-      // Fix the type issue by not forcing the type conversion
-      const result = await login(email, password);
       // The login function in AppContext should return a User object or null
+      const result = await login(email, password);
+      // Check if result is a valid user object with role
       if (result && typeof result === 'object' && 'role' in result) {
         const user = result as User;
         toast.success(`Berhasil login sebagai ${user.role}`);

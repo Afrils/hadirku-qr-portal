@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import * as XLSX from 'xlsx';
 import { Student } from '@/types/dataTypes';
+import ExcelImporter from '@/components/ExcelImporter';
 
 const studentSchema = z.object({
   name: z.string().min(3, 'Nama harus minimal 3 karakter'),
@@ -118,6 +120,64 @@ const Students = () => {
     XLSX.writeFile(wb, 'daftar-siswa.xlsx');
   };
 
+  const handleImportStudents = async (data: any[]) => {
+    setIsLoading(true);
+    try {
+      // Track successful and failed imports
+      let successCount = 0;
+      let failedCount = 0;
+      
+      for (const row of data) {
+        try {
+          // Map Excel columns to student data format
+          const studentData: Omit<Student, 'id'> = {
+            name: row['Nama'] || '',
+            studentId: row['NIS']?.toString() || '',
+            class: row['Kelas'] || '',
+            email: row['Email'] || '',
+          };
+          
+          // Validate the data
+          if (!studentData.name || !studentData.studentId || !studentData.class || !studentData.email) {
+            failedCount++;
+            continue;
+          }
+          
+          // Add the student
+          await addStudent(studentData);
+          successCount++;
+        } catch (error) {
+          console.error('Error importing student row:', error);
+          failedCount++;
+        }
+      }
+      
+      // Show summary toast
+      if (successCount > 0) {
+        toast.success(`Berhasil mengimpor ${successCount} data siswa`);
+      }
+      if (failedCount > 0) {
+        toast.error(`Gagal mengimpor ${failedCount} data siswa`);
+      }
+    } catch (error) {
+      console.error('Error during import:', error);
+      toast.error('Terjadi kesalahan saat mengimpor data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateTemplateData = () => {
+    return [
+      {
+        'NIS': '12345',
+        'Nama': 'Nama Siswa',
+        'Kelas': 'X-1',
+        'Email': 'siswa@example.com'
+      }
+    ];
+  };
+
   const handleDelete = (id: string) => {
     setStudentToDelete(id);
   };
@@ -178,6 +238,13 @@ const Students = () => {
       <div className="flex justify-between items-center gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Manajemen Siswa</h2>
         <div className="flex gap-2">
+          <ExcelImporter
+            onImport={handleImportStudents}
+            generateTemplate={generateTemplateData}
+            templateFileName="template-siswa.xlsx"
+            dialogTitle="Import Data Siswa"
+            dialogDescription="Unggah data siswa dari file Excel. Unduh template terlebih dahulu untuk format yang benar."
+          />
           <Button
             variant="outline"
             onClick={exportToExcel}

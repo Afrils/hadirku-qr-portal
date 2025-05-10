@@ -2,6 +2,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { 
   Menu, 
@@ -12,7 +19,8 @@ import {
   Calendar, 
   QrCode,
   LogOut,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Settings
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 
@@ -142,9 +150,24 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </h1>
           {currentUser && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground mr-2">
-                {currentUser.name} ({currentUser.role})
-              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+                    {currentUser.name} ({currentUser.role})
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Edit Profil
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
