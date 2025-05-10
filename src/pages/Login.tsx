@@ -29,8 +29,11 @@ const Login = () => {
     setIsLoggingIn(true);
     
     try {
-      const user = await login(email, password) as User | null;
-      if (user && user.role) {
+      // Fix the type issue by not forcing the type conversion
+      const result = await login(email, password);
+      // The login function in AppContext should return a User object or null
+      if (result && typeof result === 'object' && 'role' in result) {
+        const user = result as User;
         toast.success(`Berhasil login sebagai ${user.role}`);
         navigate('/');
       } else {

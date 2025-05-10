@@ -10,7 +10,7 @@ type AppContextType = {
   subjects: Subject[];
   schedules: Schedule[];
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   isAuthenticated: boolean;
   addStudent: (student: Omit<Student, 'id'>) => void;
@@ -48,22 +48,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [databaseError, setDatabaseError] = useState<string | null>(null);
 
   // Authentication functions
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     try {
       const user = await dbService.login(email, password);
       if (user) {
         setCurrentUser(user);
         setIsAuthenticated(true);
         toast.success(`Selamat datang, ${user.name}`);
-        return true;
+        return user;
       } else {
         toast.error('Login gagal. Email atau password tidak valid.');
-        return false;
+        return null;
       }
     } catch (error) {
       console.error('Error during login:', error);
       toast.error('Terjadi kesalahan saat login');
-      return false;
+      return null;
     }
   };
 
