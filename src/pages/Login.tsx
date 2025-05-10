@@ -29,7 +29,7 @@ const Login = () => {
     
     try {
       const user = await login(email, password);
-      if (user) {
+      if (user && user.role) {
         toast.success(`Berhasil login sebagai ${user.role}`);
         navigate('/');
       } else {
