@@ -40,7 +40,6 @@ const Students = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Student; direction: 'asc' | 'desc' } | null>(null);
@@ -85,7 +84,6 @@ const Students = () => {
 
   const onSubmit = async (data: StudentFormData) => {
     try {
-      setIsLoading(true);
       console.log("Submitting student data:", data);
       
       // Memastikan semua field required terisi
@@ -108,8 +106,6 @@ const Students = () => {
     } catch (error) {
       console.error('Error submitting student data:', error);
       toast.error('Gagal menambahkan siswa: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsLoading(false);
     }
   };
 

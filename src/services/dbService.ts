@@ -1,4 +1,3 @@
-
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
 import { supabase, TABLES } from './supabaseClient';
 import { handleSupabaseError } from './supabaseClient';
@@ -52,7 +51,7 @@ const getById = async <T>(table: string, id: string): Promise<T | null> => {
 const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'id'>): Promise<T> => {
   try {
     // Generate a UUID if one isn't provided
-    const itemWithId = { ...item, id: item.id || uuidv4() };
+    const itemWithId = { ...item, id: uuidv4() };
     
     // For debugging
     console.log(`Creating item in ${table}:`, itemWithId);
