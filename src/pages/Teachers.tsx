@@ -6,16 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
-import { Pencil, Trash, Loader2 } from 'lucide-react';
+import { Pencil, Trash, Loader2, Database } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 const Teachers = () => {
-  const { teachers, addTeacher, updateTeacher, deleteTeacher } = useAppContext();
+  const { teachers, addTeacher, updateTeacher, deleteTeacher, addDummyData, isLoading } = useAppContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -77,7 +76,6 @@ const Teachers = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setIsLoading(true);
       console.log("Submitting teacher data:", formData);
       
       if (isEditMode && currentId) {
@@ -91,8 +89,6 @@ const Teachers = () => {
     } catch (error) {
       console.error('Error submitting teacher data:', error);
       toast.error('Gagal menambahkan guru: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -111,7 +107,18 @@ const Teachers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Manajemen Guru</h2>
-        <Button onClick={() => handleOpenDialog()}>Tambah Guru</Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={addDummyData}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+            Tambah Data Dummy
+          </Button>
+          <Button onClick={() => handleOpenDialog()}>Tambah Guru</Button>
+        </div>
       </div>
 
       <div className="flex items-center mb-4">
@@ -141,7 +148,7 @@ const Teachers = () => {
                   <TableCell>{teacher.teacherId}</TableCell>
                   <TableCell>{teacher.name}</TableCell>
                   <TableCell>{teacher.email}</TableCell>
-                  <TableCell>{teacher.subjects.join(', ')}</TableCell>
+                  <TableCell>{teacher.subjects ? teacher.subjects.join(', ') : ''}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
                       variant="ghost"

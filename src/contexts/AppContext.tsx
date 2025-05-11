@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { dbService } from '@/services/dbService';
@@ -37,6 +38,7 @@ interface AppContextType {
   getTeacherById: (id: string) => Promise<Teacher | null>;
   getSubjectById: (id: string) => Promise<Subject | null>;
   getAttendanceReport: (startDate: string, endDate: string, subjectId?: string, studentId?: string) => Promise<Attendance[]>;
+  addDummyData: () => Promise<void>;
 }
 
 // Create the context with a default value
@@ -217,6 +219,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Add dummy data function
+  const addDummyData = async () => {
+    try {
+      setIsLoading(true);
+      const success = await dbService.addDummyData();
+      if (success) {
+        toast.success("Data dummy berhasil ditambahkan");
+        await refreshData(); // Reload the data to show the new entries
+      } else {
+        toast.error("Gagal menambahkan data dummy");
+      }
+    } catch (error) {
+      console.error('Error adding dummy data:', error);
+      toast.error('Terjadi kesalahan saat menambahkan data dummy');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Get entity by ID functions
   const getTeacherById = async (id: string): Promise<Teacher | null> => {
     return await dbService.getTeacherById(id);
@@ -240,12 +261,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addStudent = async (student: Omit<Student, 'id'>) => {
     try {
       setIsLoading(true);
+      console.log("Adding student:", student);
       const newStudent = await dbService.createStudent(student);
+      
+      // Create user entry for the student
+      await dbService.createUser({
+        name: student.name,
+        email: student.email,
+        password: student.password || '123456',
+        role: 'student',
+        roleId: newStudent.id
+      });
+      
       setStudents(prevStudents => [...prevStudents, newStudent]);
       toast.success('Siswa berhasil ditambahkan');
     } catch (error) {
       console.error('Failed to add student:', error);
-      toast.error('Gagal menambahkan siswa');
+      toast.error('Gagal menambahkan siswa: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -285,12 +317,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
     try {
       setIsLoading(true);
+      console.log("Adding teacher:", teacher);
       const newTeacher = await dbService.createTeacher(teacher);
+      
+      // Create user entry for the teacher
+      await dbService.createUser({
+        name: teacher.name,
+        email: teacher.email,
+        password: teacher.password || '123456',
+        role: 'teacher',
+        roleId: newTeacher.id
+      });
+      
       setTeachers(prevTeachers => [...prevTeachers, newTeacher]);
       toast.success('Guru berhasil ditambahkan');
     } catch (error) {
       console.error('Failed to add teacher:', error);
-      toast.error('Gagal menambahkan guru');
+      toast.error('Gagal menambahkan guru: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -465,7 +508,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshData,
     getTeacherById,
     getSubjectById,
-    getAttendanceReport
+    getAttendanceReport,
+    addDummyData
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

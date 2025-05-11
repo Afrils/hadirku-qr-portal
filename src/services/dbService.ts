@@ -2,6 +2,7 @@
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
 import { supabase, TABLES } from './supabaseClient';
 import { handleSupabaseError } from './supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 // Import the initial data (we'll use this for the first time setup or when resetting)
 import {
@@ -21,6 +22,7 @@ const getAll = async <T>(table: string): Promise<T[]> => {
       .select('*');
     
     if (error) handleSupabaseError(error, `fetching all from ${table}`);
+    console.log(`Retrieved data from ${table}:`, data);
     return data || [];
   } catch (error) {
     console.error(`Error in getAll(${table}):`, error);
@@ -49,19 +51,24 @@ const getById = async <T>(table: string, id: string): Promise<T | null> => {
 
 const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'id'>): Promise<T> => {
   try {
-    // Map fields for specific tables to match database column names
-    let mappedItem = { ...item };
+    // Generate a UUID if one isn't provided
+    const itemWithId = { ...item, id: item.id || uuidv4() };
     
     // For debugging
-    console.log(`Creating item in ${table}:`, mappedItem);
+    console.log(`Creating item in ${table}:`, itemWithId);
     
     const { data, error } = await supabase
       .from(table)
-      .insert([mappedItem])
+      .insert([itemWithId])
       .select()
       .single();
     
-    if (error) handleSupabaseError(error, `creating in ${table}`);
+    if (error) {
+      console.error(`Error creating item in ${table}:`, error);
+      handleSupabaseError(error, `creating in ${table}`);
+    }
+    
+    console.log(`Created item in ${table}:`, data);
     return data as T;
   } catch (error) {
     console.error(`Error in create(${table}):`, error);
@@ -260,10 +267,123 @@ const seedInitialData = async () => {
   }
 };
 
+// Function to add dummy data
+const addDummyData = async () => {
+  try {
+    console.log('Adding dummy data...');
+    
+    // Add dummy students
+    const dummyStudents: Omit<Student, 'id'>[] = [
+      {
+        name: 'Budi Santoso',
+        studentId: '2023001',
+        class: 'XI-A',
+        email: 'budi.santoso@example.com',
+        password: '123456'
+      },
+      {
+        name: 'Dewi Lestari',
+        studentId: '2023002',
+        class: 'XI-A',
+        email: 'dewi.lestari@example.com',
+        password: '123456'
+      },
+      {
+        name: 'Fajar Nugroho',
+        studentId: '2023003',
+        class: 'XI-B',
+        email: 'fajar.nugroho@example.com',
+        password: '123456'
+      },
+      {
+        name: 'Indah Permata',
+        studentId: '2023004',
+        class: 'XI-B',
+        email: 'indah.permata@example.com',
+        password: '123456'
+      },
+      {
+        name: 'Eko Purnomo',
+        studentId: '2023005',
+        class: 'XI-C',
+        email: 'eko.purnomo@example.com',
+        password: '123456'
+      }
+    ];
+    
+    for (const student of dummyStudents) {
+      const newStudent = await create<Student>(TABLES.STUDENTS, student);
+      console.log('Created dummy student:', newStudent);
+      
+      // Create user entry for student
+      await create<User>(TABLES.USERS, {
+        name: student.name,
+        email: student.email,
+        password: student.password || '123456',
+        role: 'student',
+        roleId: newStudent.id
+      });
+    }
+    
+    // Add dummy teachers
+    const dummyTeachers: Omit<Teacher, 'id'>[] = [
+      {
+        name: 'Dr. Bambang Wijaya',
+        teacherId: 'T2023001',
+        email: 'bambang.wijaya@example.com',
+        password: '123456',
+        subjects: ['Matematika', 'Fisika']
+      },
+      {
+        name: 'Sri Wahyuni, M.Pd',
+        teacherId: 'T2023002',
+        email: 'sri.wahyuni@example.com',
+        password: '123456',
+        subjects: ['Bahasa Indonesia', 'Bahasa Inggris']
+      },
+      {
+        name: 'Agus Susanto, S.Kom',
+        teacherId: 'T2023003',
+        email: 'agus.susanto@example.com',
+        password: '123456',
+        subjects: ['Informatika', 'Pemrograman']
+      },
+      {
+        name: 'Rina Puspita, M.Si',
+        teacherId: 'T2023004',
+        email: 'rina.puspita@example.com',
+        password: '123456',
+        subjects: ['Kimia', 'Biologi']
+      }
+    ];
+    
+    for (const teacher of dummyTeachers) {
+      const newTeacher = await create<Teacher>(TABLES.TEACHERS, teacher);
+      console.log('Created dummy teacher:', newTeacher);
+      
+      // Create user entry for teacher
+      await create<User>(TABLES.USERS, {
+        name: teacher.name,
+        email: teacher.email,
+        password: teacher.password || '123456',
+        role: 'teacher',
+        roleId: newTeacher.id
+      });
+    }
+    
+    console.log('Dummy data added successfully');
+    return true;
+  } catch (error) {
+    console.error('Error adding dummy data:', error);
+    return false;
+  }
+};
+
 // Export the database service
 export const dbService = {
   // Initialization
   initDatabase: seedInitialData,
+  addDummyData,
   
   // Student operations
   getAllStudents: () => getAll<Student>(TABLES.STUDENTS),

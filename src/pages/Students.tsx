@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
-import { Pencil, Trash, Loader2, Download } from 'lucide-react';
+import { Pencil, Trash, Loader2, Download, Database } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -35,7 +35,7 @@ const studentSchema = z.object({
 type StudentFormData = z.infer<typeof studentSchema>;
 
 const Students = () => {
-  const { students, addStudent, updateStudent, deleteStudent } = useAppContext();
+  const { students, addStudent, updateStudent, deleteStudent, addDummyData, isLoading } = useAppContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -244,6 +244,15 @@ const Students = () => {
       <div className="flex justify-between items-center gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Manajemen Siswa</h2>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={addDummyData}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+            Tambah Data Dummy
+          </Button>
           <ExcelImporter
             onImport={handleImportStudents}
             generateTemplate={generateTemplateData}
