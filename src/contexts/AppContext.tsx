@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { dbService } from '@/services/dbService';
@@ -37,6 +36,7 @@ interface AppContextType {
   refreshData: () => Promise<void>;
   getTeacherById: (id: string) => Promise<Teacher | null>;
   getSubjectById: (id: string) => Promise<Subject | null>;
+  getAttendanceReport: (startDate: string, endDate: string, subjectId?: string, studentId?: string) => Promise<Attendance[]>;
 }
 
 // Create the context with a default value
@@ -166,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dbService.logout(); // Call dbService logout method
     setCurrentUser(null);
     setIsAuthenticated(false);
+    localStorage.removeItem('attendance_current_user');
   };
 
   // Function to reset the session timeout
@@ -223,6 +224,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getSubjectById = async (id: string): Promise<Subject | null> => {
     return await dbService.getSubjectById(id);
+  };
+
+  // Attendance report function
+  const getAttendanceReport = async (
+    startDate: string, 
+    endDate: string, 
+    subjectId?: string, 
+    studentId?: string
+  ): Promise<Attendance[]> => {
+    return await dbService.getAttendanceReport(startDate, endDate, subjectId, studentId);
   };
 
   // Student CRUD functions
@@ -453,7 +464,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateLastActivityTime,
     refreshData,
     getTeacherById,
-    getSubjectById
+    getSubjectById,
+    getAttendanceReport
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

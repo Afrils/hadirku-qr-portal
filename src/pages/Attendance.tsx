@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,15 +7,16 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { dbService } from '@/services/dbService';
-import { Attendance, Student } from '@/types/dataTypes';
+import type { Attendance as AttendanceType } from '@/types/dataTypes';
+import { Student } from '@/types/dataTypes';
 import { toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
 
 const Attendance = () => {
-  const { refreshData, /* other context values */ } = useAppContext();
-  const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const { refreshData, subjects, schedules } = useAppContext();
+  const [attendances, setAttendances] = useState<AttendanceType[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [filteredAttendances, setFilteredAttendances] = useState<Attendance[]>([]);
+  const [filteredAttendances, setFilteredAttendances] = useState<AttendanceType[]>([]);
   
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState('');

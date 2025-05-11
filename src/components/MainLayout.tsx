@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
+import { toast } from '@/components/ui/sonner';
 
 type NavItemProps = {
   to: string;
@@ -64,6 +64,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleLogout = () => {
     logout();
+    toast.success('Berhasil keluar');
     navigate('/login');
   };
 

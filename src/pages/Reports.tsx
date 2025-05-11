@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Attendance } from '@/types/dataTypes';
 import { useAppContext } from '@/contexts/AppContext';
+import { toast } from '@/components/ui/sonner';
 
 const Reports = () => {
   const { subjects, students, getAttendanceReport } = useAppContext();
@@ -28,7 +29,7 @@ const Reports = () => {
     setIsLoading(true);
     try {
       if (!startDate || !endDate) {
-        alert('Please select both start and end dates.');
+        toast.error('Please select both start and end dates.');
         return;
       }
 
@@ -42,9 +43,10 @@ const Reports = () => {
         selectedStudent
       );
       setReportData(data);
+      toast.success('Laporan berhasil dibuat');
     } catch (error) {
       console.error('Error generating report:', error);
-      alert('Failed to generate report.');
+      toast.error('Gagal membuat laporan');
     } finally {
       setIsLoading(false);
     }
