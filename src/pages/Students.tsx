@@ -123,7 +123,6 @@ const Students = () => {
   };
 
   const handleImportStudents = async (data: any[]) => {
-    setIsLoading(true);
     try {
       // Track successful and failed imports
       let successCount = 0;
@@ -164,10 +163,8 @@ const Students = () => {
     } catch (error) {
       console.error('Error during import:', error);
       toast.error('Terjadi kesalahan saat mengimpor data');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }
 
   const generateTemplateData = () => {
     return [
