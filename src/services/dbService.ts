@@ -48,26 +48,45 @@ const getById = async <T>(table: string, id: string): Promise<T | null> => {
 };
 
 const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'id'>): Promise<T> => {
-  const { data, error } = await supabase
-    .from(table)
-    .insert([item])
-    .select()
-    .single();
-  
-  if (error) handleSupabaseError(error, `creating in ${table}`);
-  return data as T;
+  try {
+    // Map fields for specific tables to match database column names
+    let mappedItem = { ...item };
+    
+    // For debugging
+    console.log(`Creating item in ${table}:`, mappedItem);
+    
+    const { data, error } = await supabase
+      .from(table)
+      .insert([mappedItem])
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error, `creating in ${table}`);
+    return data as T;
+  } catch (error) {
+    console.error(`Error in create(${table}):`, error);
+    throw error;
+  }
 };
 
 const update = async <T extends { id: string }>(table: string, id: string, item: Omit<T, 'id'>): Promise<T> => {
-  const { data, error } = await supabase
-    .from(table)
-    .update(item)
-    .eq('id', id)
-    .select()
-    .single();
-  
-  if (error) handleSupabaseError(error, `updating in ${table}`);
-  return data as T;
+  try {
+    // Map fields for specific tables to match database column names
+    let mappedItem = { ...item };
+    
+    const { data, error } = await supabase
+      .from(table)
+      .update(mappedItem)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error, `updating in ${table}`);
+    return data as T;
+  } catch (error) {
+    console.error(`Error in update(${table}, ${id}):`, error);
+    throw error;
+  }
 };
 
 const remove = async (table: string, id: string): Promise<void> => {

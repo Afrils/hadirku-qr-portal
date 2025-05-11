@@ -86,22 +86,28 @@ const Students = () => {
   const onSubmit = async (data: StudentFormData) => {
     try {
       setIsLoading(true);
+      console.log("Submitting student data:", data);
+      
       // Memastikan semua field required terisi
       const studentData: Omit<Student, 'id'> = {
         name: data.name,
         studentId: data.studentId,
         class: data.class,
-        email: data.email
+        email: data.email,
+        password: '123456' // Default password for new students
       };
       
       if (isEditMode && currentId) {
         await updateStudent(currentId, studentData);
+        toast.success('Data siswa berhasil diperbarui');
       } else {
         await addStudent(studentData);
+        toast.success('Siswa berhasil ditambahkan');
       }
       handleCloseDialog();
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error submitting student data:', error);
+      toast.error('Gagal menambahkan siswa: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }

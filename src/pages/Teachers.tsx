@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
-import { Pencil, Trash } from 'lucide-react';
+import { Pencil, Trash, Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 
 const Teachers = () => {
   const { teachers, addTeacher, updateTeacher, deleteTeacher } = useAppContext();
@@ -14,12 +15,14 @@ const Teachers = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     teacherId: '',
     email: '',
     subjects: [''],
+    password: '123456' // Default password
   });
 
   const resetForm = () => {
@@ -28,6 +31,7 @@ const Teachers = () => {
       teacherId: '',
       email: '',
       subjects: [''],
+      password: '123456'
     });
     setIsEditMode(false);
     setCurrentId(null);
@@ -43,6 +47,7 @@ const Teachers = () => {
         teacherId: teacher.teacherId,
         email: teacher.email,
         subjects: teacher.subjects,
+        password: teacher.password || '123456'
       });
     }
     setIsDialogOpen(true);
@@ -69,14 +74,26 @@ const Teachers = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEditMode && currentId) {
-      updateTeacher(currentId, formData);
-    } else {
-      addTeacher(formData);
+    try {
+      setIsLoading(true);
+      console.log("Submitting teacher data:", formData);
+      
+      if (isEditMode && currentId) {
+        await updateTeacher(currentId, formData);
+        toast.success('Data guru berhasil diperbarui');
+      } else {
+        await addTeacher(formData);
+        toast.success('Guru berhasil ditambahkan');
+      }
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error submitting teacher data:', error);
+      toast.error('Gagal menambahkan guru: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoading(false);
     }
-    handleCloseDialog();
   };
 
   const handleDelete = (id: string) => {
@@ -222,7 +239,10 @@ const Teachers = () => {
               <Button variant="outline" type="button" onClick={handleCloseDialog}>
                 Batal
               </Button>
-              <Button type="submit">Simpan</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditMode ? 'Simpan' : 'Tambah'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
