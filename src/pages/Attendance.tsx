@@ -18,8 +18,8 @@ const Attendance = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredAttendances, setFilteredAttendances] = useState<AttendanceType[]>([]);
   
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedSchedule, setSelectedSchedule] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [selectedSchedule, setSelectedSchedule] = useState('all');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
   // Load data
@@ -42,7 +42,7 @@ const Attendance = () => {
   };
   
   // Filter schedules based on selected subject
-  const filteredSchedules = selectedSubject 
+  const filteredSchedules = selectedSubject && selectedSubject !== 'all'
     ? schedules.filter(schedule => schedule.subjectId === selectedSubject)
     : [];
   
@@ -50,11 +50,11 @@ const Attendance = () => {
   useEffect(() => {
     let filtered = [...attendances];
     
-    if (selectedSubject) {
+    if (selectedSubject && selectedSubject !== 'all') {
       filtered = filtered.filter(a => a.subjectId === selectedSubject);
     }
     
-    if (selectedSchedule) {
+    if (selectedSchedule && selectedSchedule !== 'all') {
       filtered = filtered.filter(a => a.scheduleId === selectedSchedule);
     }
     
@@ -129,7 +129,7 @@ const Attendance = () => {
               value={selectedSubject} 
               onValueChange={(value) => {
                 setSelectedSubject(value);
-                setSelectedSchedule('');
+                setSelectedSchedule('all');
               }}
             >
               <SelectTrigger>
@@ -151,10 +151,10 @@ const Attendance = () => {
             <Select 
               value={selectedSchedule} 
               onValueChange={setSelectedSchedule}
-              disabled={!selectedSubject}
+              disabled={!selectedSubject || selectedSubject === 'all'}
             >
               <SelectTrigger>
-                <SelectValue placeholder={selectedSubject ? 'Pilih jadwal' : 'Pilih mata pelajaran terlebih dahulu'} />
+                <SelectValue placeholder={selectedSubject && selectedSubject !== 'all' ? 'Pilih jadwal' : 'Pilih mata pelajaran terlebih dahulu'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Jadwal</SelectItem>

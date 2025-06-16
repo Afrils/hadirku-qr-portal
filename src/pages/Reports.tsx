@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,8 +17,8 @@ const Reports = () => {
   const { subjects, students, getAttendanceReport } = useAppContext();
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('all');
+  const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [reportData, setReportData] = useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -39,8 +40,8 @@ const Reports = () => {
       const data = await getAttendanceReport(
         formattedStartDate,
         formattedEndDate,
-        selectedSubject,
-        selectedStudent
+        selectedSubject === 'all' ? undefined : selectedSubject,
+        selectedStudent === 'all' ? undefined : selectedStudent
       );
       setReportData(data);
       toast.success('Laporan berhasil dibuat');
@@ -118,12 +119,12 @@ const Reports = () => {
         {/* Subject Filter */}
         <div>
           <Label>Mata Pelajaran</Label>
-          <Select onValueChange={setSelectedSubject}>
+          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
             <SelectTrigger className="w-[240px]">
               <SelectValue placeholder="Semua Mata Pelajaran" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Mata Pelajaran</SelectItem>
+              <SelectItem value="all">Semua Mata Pelajaran</SelectItem>
               {subjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id}>
                   {subject.name}
@@ -136,12 +137,12 @@ const Reports = () => {
         {/* Student Filter */}
         <div>
           <Label>Siswa</Label>
-          <Select onValueChange={setSelectedStudent}>
+          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
             <SelectTrigger className="w-[240px]">
               <SelectValue placeholder="Semua Siswa" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Siswa</SelectItem>
+              <SelectItem value="all">Semua Siswa</SelectItem>
               {students.map((student) => (
                 <SelectItem key={student.id} value={student.id}>
                   {student.name}

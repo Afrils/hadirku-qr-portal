@@ -2,6 +2,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Student, Teacher, Subject, Schedule, User, Attendance } from '@/types/dataTypes';
 
 class DatabaseService {
+  // Add the missing initDatabase method
+  async initDatabase(): Promise<void> {
+    console.log('Database initialization complete - tables already exist');
+  }
+
   async login(email: string, password: string): Promise<User | null> {
     try {
       const { data: users, error } = await supabase
@@ -24,8 +29,8 @@ class DatabaseService {
           password: user.password,
           role: user.role as 'admin' | 'teacher' | 'student',
           roleId: user.role_id,
-          created_at: '', // You might need to fetch this from another table
-          updated_at: '', // You might need to fetch this from another table
+          created_at: '',
+          updated_at: '',
         };
       } else {
         return null; // User not found or invalid credentials
@@ -37,8 +42,6 @@ class DatabaseService {
   }
 
   logout() {
-    // localStorage.removeItem('sb-rfwphqqljxdylisaeqsx-auth-token');
-    // supabase.auth.signOut()
     console.log('logout');
   }
 
@@ -58,7 +61,6 @@ class DatabaseService {
 
     if (error) throw error;
     
-    // Map database fields back to frontend format
     return {
       id: data.id,
       name: data.name,
@@ -93,7 +95,6 @@ class DatabaseService {
     const { data, error } = await supabase.from('students').select('*');
     if (error) throw error;
     
-    // Map database fields to frontend format
     return data.map(student => ({
       id: student.id,
       name: student.name,
@@ -117,7 +118,6 @@ class DatabaseService {
     }
 
     if (data) {
-      // Map database fields to frontend format
       return {
         id: data.id,
         name: data.name,
@@ -147,7 +147,6 @@ class DatabaseService {
 
     if (error) throw error;
     
-    // Map database fields back to frontend format
     return {
       id: data.id,
       name: data.name,
@@ -182,7 +181,6 @@ class DatabaseService {
     const { data, error } = await supabase.from('teachers').select('*');
     if (error) throw error;
 
-    // Map database fields to frontend format
     return data.map(teacher => ({
       id: teacher.id,
       name: teacher.name,
@@ -206,7 +204,6 @@ class DatabaseService {
     }
 
     if (data) {
-      // Map database fields to frontend format
       return {
         id: data.id,
         name: data.name,
@@ -267,16 +264,46 @@ class DatabaseService {
   async createSchedule(schedule: Omit<Schedule, 'id'>): Promise<Schedule> {
     const { data, error } = await supabase
       .from('schedules')
-      .insert(schedule)
+      .insert({
+        subject_id: schedule.subjectId,
+        teacher_id: schedule.teacherId,
+        class: schedule.class,
+        day_of_week: schedule.dayOfWeek,
+        start_time: schedule.startTime,
+        end_time: schedule.endTime,
+        room_number: schedule.roomNumber
+      })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      subjectId: data.subject_id,
+      teacherId: data.teacher_id,
+      class: data.class,
+      dayOfWeek: data.day_of_week as 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu' | 'Minggu',
+      startTime: data.start_time,
+      endTime: data.end_time,
+      roomNumber: data.room_number
+    };
   }
 
   async updateSchedule(id: string, schedule: Omit<Schedule, 'id'>): Promise<void> {
-    const { error } = await supabase.from('schedules').update(schedule).eq('id', id);
+    const { error } = await supabase
+      .from('schedules')
+      .update({
+        subject_id: schedule.subjectId,
+        teacher_id: schedule.teacherId,
+        class: schedule.class,
+        day_of_week: schedule.dayOfWeek,
+        start_time: schedule.startTime,
+        end_time: schedule.endTime,
+        room_number: schedule.roomNumber
+      })
+      .eq('id', id);
+
     if (error) throw error;
   }
 
@@ -288,19 +315,61 @@ class DatabaseService {
   async getAllSchedules(): Promise<Schedule[]> {
     const { data, error } = await supabase.from('schedules').select('*');
     if (error) throw error;
-    return data;
+    
+    return data.map(schedule => ({
+      id: schedule.id,
+      subjectId: schedule.subject_id,
+      teacherId: schedule.teacher_id,
+      class: schedule.class,
+      dayOfWeek: schedule.day_of_week as 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu' | 'Minggu',
+      startTime: schedule.start_time,
+      endTime: schedule.end_time,
+      roomNumber: schedule.room_number
+    }));
   }
 
   // Attendance operations
   async createAttendance(attendance: Omit<Attendance, 'id'>): Promise<Attendance> {
     const { data, error } = await supabase
       .from('attendances')
-      .insert(attendance)
+      .insert({
+        student_id: attendance.studentId,
+        schedule_id: attendance.scheduleId,
+        subject_id: attendance.subjectId,
+        date: attendance.date,
+        status: attendance.status,
+        timestamp: attendance.timestamp
+      })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      studentId: data.student_id,
+      scheduleId: data.schedule_id,
+      subjectId: data.subject_id,
+      date: data.date,
+      status: data.status as 'present' | 'absent' | 'late' | 'sick' | 'permission',
+      timestamp: data.timestamp
+    };
+  }
+
+  // Add the missing getAllAttendances method
+  async getAllAttendances(): Promise<Attendance[]> {
+    const { data, error } = await supabase.from('attendances').select('*');
+    if (error) throw error;
+    
+    return data.map(attendance => ({
+      id: attendance.id,
+      studentId: attendance.student_id,
+      scheduleId: attendance.schedule_id,
+      subjectId: attendance.subject_id,
+      date: attendance.date,
+      status: attendance.status as 'present' | 'absent' | 'late' | 'sick' | 'permission',
+      timestamp: attendance.timestamp
+    }));
   }
 
   async getAttendanceReport(
@@ -330,7 +399,15 @@ class DatabaseService {
       throw error;
     }
 
-    return data;
+    return data.map(attendance => ({
+      id: attendance.id,
+      studentId: attendance.student_id,
+      scheduleId: attendance.schedule_id,
+      subjectId: attendance.subject_id,
+      date: attendance.date,
+      status: attendance.status as 'present' | 'absent' | 'late' | 'sick' | 'permission',
+      timestamp: attendance.timestamp
+    }));
   }
 
   // User operations
@@ -349,7 +426,6 @@ class DatabaseService {
 
     if (error) throw error;
     
-    // Map database fields back to frontend format
     return {
       id: data.id,
       name: data.name,
@@ -357,8 +433,8 @@ class DatabaseService {
       password: data.password,
       role: data.role as 'admin' | 'teacher' | 'student',
       roleId: data.role_id,
-      created_at: '', // You might need to fetch this from another table
-      updated_at: '', // You might need to fetch this from another table
+      created_at: '',
+      updated_at: '',
     };
   }
 }
