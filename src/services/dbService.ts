@@ -1,17 +1,8 @@
+
 import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
 import { supabase, TABLES } from './supabaseClient';
 import { handleSupabaseError } from './supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
-
-// Import the initial data (we'll use this for the first time setup or when resetting)
-import {
-  initialStudents,
-  initialTeachers,
-  initialAdmins,
-  initialSubjects,
-  initialSchedules,
-  initialAttendances
-} from './initialData';
 
 // Generic CRUD operations using Supabase
 const getAll = async <T>(table: string): Promise<T[]> => {
@@ -77,12 +68,9 @@ const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'i
 
 const update = async <T extends { id: string }>(table: string, id: string, item: Omit<T, 'id'>): Promise<T> => {
   try {
-    // Map fields for specific tables to match database column names
-    let mappedItem = { ...item };
-    
     const { data, error } = await supabase
       .from(table)
-      .update(mappedItem)
+      .update(item)
       .eq('id', id)
       .select()
       .single();
@@ -109,7 +97,6 @@ const authenticateUser = async (email: string, password: string): Promise<User |
   try {
     console.log(`Attempting to authenticate user with email: ${email}`);
     
-    // For now, we'll do a direct password comparison in the users table
     const { data: users, error } = await supabase
       .from('users')
       .select('*')
@@ -118,46 +105,6 @@ const authenticateUser = async (email: string, password: string): Promise<User |
 
     if (error) {
       console.error('Authentication error:', error);
-      
-      // Try demo credentials as a fallback for testing
-      if (email === 'admin@example.com' && password === 'admin123') {
-        console.log('Using demo admin fallback');
-        return {
-          id: 'admin-1',
-          name: 'Admin Utama',
-          email: 'admin@example.com',
-          password: 'admin123',
-          role: 'admin',
-          roleId: '1'
-        };
-      }
-      
-      // Teacher demo account
-      if (email === 'siti.rahayu@example.com' && password === '123456') {
-        console.log('Using demo teacher fallback');
-        return {
-          id: 'teacher-1',
-          name: 'Siti Rahayu',
-          email: 'siti.rahayu@example.com',
-          password: '123456',
-          role: 'teacher',
-          roleId: '1'
-        };
-      }
-      
-      // Student demo account
-      if (email === 'ahmad.farizi@example.com' && password === '123456') {
-        console.log('Using demo student fallback');
-        return {
-          id: 'student-1',
-          name: 'Ahmad Farizi',
-          email: 'ahmad.farizi@example.com',
-          password: '123456',
-          role: 'student',
-          roleId: '1'
-        };
-      }
-      
       return null;
     }
 
@@ -190,190 +137,10 @@ const logoutUser = (): void => {
 // Function to seed initial data
 const seedInitialData = async () => {
   try {
-    console.log('Checking if data needs to be seeded...');
-    
-    // Check if users table has data
-    const { count: userCount, error: countError } = await supabase
-      .from(TABLES.USERS)
-      .select('*', { count: 'exact', head: true });
-    
-    if (countError) {
-      console.error('Error checking user count:', countError);
-      return false;
-    }
-    
-    if (!userCount || userCount === 0) {
-      console.log('No users found. Seeding initial data...');
-      
-      // Insert initial data - first create admin
-      await supabase.from(TABLES.ADMINS).insert(initialAdmins);
-      console.log('Admins created');
-      
-      // Create other data
-      await supabase.from(TABLES.STUDENTS).insert(initialStudents);
-      console.log('Students created');
-      
-      await supabase.from(TABLES.TEACHERS).insert(initialTeachers);
-      console.log('Teachers created');
-      
-      // Creating users based on admin, teachers, and students
-      const admins = initialAdmins.map(admin => ({
-        name: admin.name,
-        email: admin.email,
-        password: admin.password,
-        role: 'admin',
-        roleId: admin.id
-      }));
-      
-      const teachers = initialTeachers.map(teacher => ({
-        name: teacher.name,
-        email: teacher.email,
-        password: teacher.password || '123456',
-        role: 'teacher',
-        roleId: teacher.id
-      }));
-      
-      const students = initialStudents.map(student => ({
-        name: student.name,
-        email: student.email,
-        password: student.password || '123456',
-        role: 'student',
-        roleId: student.id
-      }));
-      
-      const allUsers = [...admins, ...teachers, ...students];
-      await supabase.from(TABLES.USERS).insert(allUsers);
-      console.log('Users created');
-      
-      await supabase.from(TABLES.SUBJECTS).insert(initialSubjects);
-      console.log('Subjects created');
-      
-      await supabase.from(TABLES.SCHEDULES).insert(initialSchedules);
-      console.log('Schedules created');
-      
-      await supabase.from(TABLES.ATTENDANCES).insert(initialAttendances);
-      console.log('Attendances created');
-      
-      console.log('Initial data seeded successfully');
-      return true;
-    } else {
-      console.log('Data already exists, skipping seed');
-      return true;
-    }
-  } catch (error) {
-    console.error('Error seeding initial data:', error);
-    return false;
-  }
-};
-
-// Function to add dummy data
-const addDummyData = async () => {
-  try {
-    console.log('Adding dummy data...');
-    
-    // Add dummy students
-    const dummyStudents: Omit<Student, 'id'>[] = [
-      {
-        name: 'Budi Santoso',
-        studentId: '2023001',
-        class: 'XI-A',
-        email: 'budi.santoso@example.com',
-        password: '123456'
-      },
-      {
-        name: 'Dewi Lestari',
-        studentId: '2023002',
-        class: 'XI-A',
-        email: 'dewi.lestari@example.com',
-        password: '123456'
-      },
-      {
-        name: 'Fajar Nugroho',
-        studentId: '2023003',
-        class: 'XI-B',
-        email: 'fajar.nugroho@example.com',
-        password: '123456'
-      },
-      {
-        name: 'Indah Permata',
-        studentId: '2023004',
-        class: 'XI-B',
-        email: 'indah.permata@example.com',
-        password: '123456'
-      },
-      {
-        name: 'Eko Purnomo',
-        studentId: '2023005',
-        class: 'XI-C',
-        email: 'eko.purnomo@example.com',
-        password: '123456'
-      }
-    ];
-    
-    for (const student of dummyStudents) {
-      const newStudent = await create<Student>(TABLES.STUDENTS, student);
-      console.log('Created dummy student:', newStudent);
-      
-      // Create user entry for student
-      await create<User>(TABLES.USERS, {
-        name: student.name,
-        email: student.email,
-        password: student.password || '123456',
-        role: 'student',
-        roleId: newStudent.id
-      });
-    }
-    
-    // Add dummy teachers
-    const dummyTeachers: Omit<Teacher, 'id'>[] = [
-      {
-        name: 'Dr. Bambang Wijaya',
-        teacherId: 'T2023001',
-        email: 'bambang.wijaya@example.com',
-        password: '123456',
-        subjects: ['Matematika', 'Fisika']
-      },
-      {
-        name: 'Sri Wahyuni, M.Pd',
-        teacherId: 'T2023002',
-        email: 'sri.wahyuni@example.com',
-        password: '123456',
-        subjects: ['Bahasa Indonesia', 'Bahasa Inggris']
-      },
-      {
-        name: 'Agus Susanto, S.Kom',
-        teacherId: 'T2023003',
-        email: 'agus.susanto@example.com',
-        password: '123456',
-        subjects: ['Informatika', 'Pemrograman']
-      },
-      {
-        name: 'Rina Puspita, M.Si',
-        teacherId: 'T2023004',
-        email: 'rina.puspita@example.com',
-        password: '123456',
-        subjects: ['Kimia', 'Biologi']
-      }
-    ];
-    
-    for (const teacher of dummyTeachers) {
-      const newTeacher = await create<Teacher>(TABLES.TEACHERS, teacher);
-      console.log('Created dummy teacher:', newTeacher);
-      
-      // Create user entry for teacher
-      await create<User>(TABLES.USERS, {
-        name: teacher.name,
-        email: teacher.email,
-        password: teacher.password || '123456',
-        role: 'teacher',
-        roleId: newTeacher.id
-      });
-    }
-    
-    console.log('Dummy data added successfully');
+    console.log('Initial data already seeded in database');
     return true;
   } catch (error) {
-    console.error('Error adding dummy data:', error);
+    console.error('Error checking initial data:', error);
     return false;
   }
 };
@@ -382,7 +149,6 @@ const addDummyData = async () => {
 export const dbService = {
   // Initialization
   initDatabase: seedInitialData,
-  addDummyData,
   
   // Student operations
   getAllStudents: () => getAll<Student>(TABLES.STUDENTS),
@@ -443,7 +209,7 @@ export const dbService = {
     const { data, error } = await supabase
       .from(TABLES.ATTENDANCES)
       .select('*')
-      .eq('scheduleId', scheduleId);
+      .eq('schedule_id', scheduleId);
       
     if (error) handleSupabaseError(error, 'fetching attendances by schedule');
     return data || [];
@@ -453,7 +219,7 @@ export const dbService = {
     const { data, error } = await supabase
       .from(TABLES.ATTENDANCES)
       .select('*')
-      .eq('studentId', studentId);
+      .eq('student_id', studentId);
       
     if (error) handleSupabaseError(error, 'fetching attendances by student');
     return data || [];
@@ -478,11 +244,11 @@ export const dbService = {
       .lte('date', endDate);
     
     if (subjectId) {
-      query = query.eq('subjectId', subjectId);
+      query = query.eq('subject_id', subjectId);
     }
     
     if (studentId) {
-      query = query.eq('studentId', studentId);
+      query = query.eq('student_id', studentId);
     }
     
     const { data, error } = await query;

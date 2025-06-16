@@ -96,29 +96,7 @@ export type Database = {
           subject_id?: string | null
           timestamp?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "attendances_schedule_id_fkey"
-            columns: ["schedule_id"]
-            isOneToOne: false
-            referencedRelation: "schedules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendances_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendances_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -184,22 +162,7 @@ export type Database = {
           subject_id?: string | null
           teacher_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "schedules_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedules_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       students: {
         Row: {
@@ -215,7 +178,7 @@ export type Database = {
           email: string
           id?: string
           name: string
-          password: string
+          password?: string
           student_id: string
         }
         Update: {
@@ -247,15 +210,7 @@ export type Database = {
           name?: string
           teacher_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "subjects_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       teachers: {
         Row: {
@@ -270,7 +225,7 @@ export type Database = {
           email: string
           id?: string
           name: string
-          password: string
+          password?: string
           subjects?: string[] | null
           teacher_id: string
         }
