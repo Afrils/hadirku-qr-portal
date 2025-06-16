@@ -1,259 +1,366 @@
+import { supabase } from '@/integrations/supabase/client';
+import { Student, Teacher, Subject, Schedule, User, Attendance } from '@/types/dataTypes';
 
-import { Student, Teacher, Subject, Schedule, Attendance, Admin, User } from '../types/dataTypes';
-import { supabase, TABLES } from './supabaseClient';
-import { handleSupabaseError } from './supabaseClient';
-import { v4 as uuidv4 } from 'uuid';
+class DatabaseService {
+  async login(email: string, password: string): Promise<User | null> {
+    try {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password);
 
-// Generic CRUD operations using Supabase
-const getAll = async <T>(table: string): Promise<T[]> => {
-  try {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*');
-    
-    if (error) handleSupabaseError(error, `fetching all from ${table}`);
-    console.log(`Retrieved data from ${table}:`, data);
-    return data || [];
-  } catch (error) {
-    console.error(`Error in getAll(${table}):`, error);
-    return [];
+      if (error) {
+        console.error('Error during login:', error);
+        return null;
+      }
+
+      if (users && users.length > 0) {
+        const user = users[0];
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          role: user.role as 'admin' | 'teacher' | 'student',
+          roleId: user.role_id,
+          created_at: '', // You might need to fetch this from another table
+          updated_at: '', // You might need to fetch this from another table
+        };
+      } else {
+        return null; // User not found or invalid credentials
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      return null;
+    }
   }
-};
 
-const getById = async <T>(table: string, id: string): Promise<T | null> => {
-  try {
+  logout() {
+    // localStorage.removeItem('sb-rfwphqqljxdylisaeqsx-auth-token');
+    // supabase.auth.signOut()
+    console.log('logout');
+  }
+
+  // Student operations
+  async createStudent(student: Omit<Student, 'id'>): Promise<Student> {
     const { data, error } = await supabase
-      .from(table)
+      .from('students')
+      .insert({
+        name: student.name,
+        student_id: student.studentId,
+        class: student.class,
+        email: student.email,
+        password: student.password || '123456'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Map database fields back to frontend format
+    return {
+      id: data.id,
+      name: data.name,
+      studentId: data.student_id,
+      class: data.class,
+      email: data.email,
+      password: data.password
+    };
+  }
+
+  async updateStudent(id: string, student: Omit<Student, 'id'>): Promise<void> {
+    const { error } = await supabase
+      .from('students')
+      .update({
+        name: student.name,
+        student_id: student.studentId,
+        class: student.class,
+        email: student.email,
+        password: student.password || '123456'
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
+  async deleteStudent(id: string): Promise<void> {
+    const { error } = await supabase.from('students').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getAllStudents(): Promise<Student[]> {
+    const { data, error } = await supabase.from('students').select('*');
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data.map(student => ({
+      id: student.id,
+      name: student.name,
+      studentId: student.student_id,
+      class: student.class,
+      email: student.email,
+      password: student.password
+    }));
+  }
+
+  async getStudentById(id: string): Promise<Student | null> {
+    const { data, error } = await supabase
+      .from('students')
       .select('*')
       .eq('id', id)
       .single();
-    
-    if (error && error.code !== 'PGRST116') { // Ignore not found error
-      handleSupabaseError(error, `fetching by id from ${table}`);
-    }
-    
-    return data || null;
-  } catch (error) {
-    console.error(`Error in getById(${table}, ${id}):`, error);
-    return null;
-  }
-};
-
-const create = async <T extends { id?: string }>(table: string, item: Omit<T, 'id'>): Promise<T> => {
-  try {
-    // Generate a UUID if one isn't provided
-    const itemWithId = { ...item, id: uuidv4() };
-    
-    // For debugging
-    console.log(`Creating item in ${table}:`, itemWithId);
-    
-    const { data, error } = await supabase
-      .from(table)
-      .insert([itemWithId])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error(`Error creating item in ${table}:`, error);
-      handleSupabaseError(error, `creating in ${table}`);
-    }
-    
-    console.log(`Created item in ${table}:`, data);
-    return data as T;
-  } catch (error) {
-    console.error(`Error in create(${table}):`, error);
-    throw error;
-  }
-};
-
-const update = async <T extends { id: string }>(table: string, id: string, item: Omit<T, 'id'>): Promise<T> => {
-  try {
-    const { data, error } = await supabase
-      .from(table)
-      .update(item)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) handleSupabaseError(error, `updating in ${table}`);
-    return data as T;
-  } catch (error) {
-    console.error(`Error in update(${table}, ${id}):`, error);
-    throw error;
-  }
-};
-
-const remove = async (table: string, id: string): Promise<void> => {
-  const { error } = await supabase
-    .from(table)
-    .delete()
-    .eq('id', id);
-  
-  if (error) handleSupabaseError(error, `deleting from ${table}`);
-};
-
-// Authentication functions
-const authenticateUser = async (email: string, password: string): Promise<User | null> => {
-  try {
-    console.log(`Attempting to authenticate user with email: ${email}`);
-    
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
 
     if (error) {
-      console.error('Authentication error:', error);
+      console.error('Error fetching student by ID:', error);
       return null;
     }
 
-    const user = users as User;
-    
-    // Direct password comparison (not secure, but for demo purposes)
-    if (user && user.password === password) {
-      console.log('Authentication successful for user:', user.name);
-      // Store current user in localStorage for session management
-      localStorage.setItem('attendance_current_user', JSON.stringify(user));
-      return user;
+    if (data) {
+      // Map database fields to frontend format
+      return {
+        id: data.id,
+        name: data.name,
+        studentId: data.student_id,
+        class: data.class,
+        email: data.email,
+        password: data.password
+      };
     }
-    
-    return null;
-  } catch (error) {
-    console.error('Authentication error:', error);
+
     return null;
   }
-};
 
-const getCurrentUser = (): User | null => {
-  const userJson = localStorage.getItem('attendance_current_user');
-  return userJson ? JSON.parse(userJson) : null;
-};
-
-const logoutUser = (): void => {
-  localStorage.removeItem('attendance_current_user');
-};
-
-// Function to seed initial data
-const seedInitialData = async () => {
-  try {
-    console.log('Initial data already seeded in database');
-    return true;
-  } catch (error) {
-    console.error('Error checking initial data:', error);
-    return false;
-  }
-};
-
-// Export the database service
-export const dbService = {
-  // Initialization
-  initDatabase: seedInitialData,
-  
-  // Student operations
-  getAllStudents: () => getAll<Student>(TABLES.STUDENTS),
-  getStudentById: (id: string) => getById<Student>(TABLES.STUDENTS, id),
-  createStudent: (student: Omit<Student, 'id'>) => create<Student>(TABLES.STUDENTS, student),
-  updateStudent: (id: string, student: Omit<Student, 'id'>) => update<Student>(TABLES.STUDENTS, id, student),
-  deleteStudent: (id: string) => remove(TABLES.STUDENTS, id),
-  
   // Teacher operations
-  getAllTeachers: () => getAll<Teacher>(TABLES.TEACHERS),
-  getTeacherById: (id: string) => getById<Teacher>(TABLES.TEACHERS, id),
-  createTeacher: (teacher: Omit<Teacher, 'id'>) => create<Teacher>(TABLES.TEACHERS, teacher),
-  updateTeacher: (id: string, teacher: Omit<Teacher, 'id'>) => update<Teacher>(TABLES.TEACHERS, id, teacher),
-  deleteTeacher: (id: string) => remove(TABLES.TEACHERS, id),
-  
-  // Admin operations
-  getAllAdmins: () => getAll<Admin>(TABLES.ADMINS),
-  getAdminById: (id: string) => getById<Admin>(TABLES.ADMINS, id),
-  createAdmin: (admin: Omit<Admin, 'id'>) => create<Admin>(TABLES.ADMINS, admin),
-  updateAdmin: (id: string, admin: Omit<Admin, 'id'>) => update<Admin>(TABLES.ADMINS, id, admin),
-  deleteAdmin: (id: string) => remove(TABLES.ADMINS, id),
-  
-  // User operations
-  getAllUsers: () => getAll<User>(TABLES.USERS),
-  getUserById: (id: string) => getById<User>(TABLES.USERS, id),
-  createUser: (user: Omit<User, 'id'>) => create<User>(TABLES.USERS, user),
-  updateUser: (id: string, user: Omit<User, 'id'>) => update<User>(TABLES.USERS, id, user),
-  deleteUser: (id: string) => remove(TABLES.USERS, id),
-  
-  // Authentication
-  login: authenticateUser,
-  logout: logoutUser,
-  getCurrentUser,
-  
+  async createTeacher(teacher: Omit<Teacher, 'id'>): Promise<Teacher> {
+    const { data, error } = await supabase
+      .from('teachers')
+      .insert({
+        name: teacher.name,
+        teacher_id: teacher.teacherId,
+        email: teacher.email,
+        subjects: teacher.subjects || [],
+        password: teacher.password || '123456'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Map database fields back to frontend format
+    return {
+      id: data.id,
+      name: data.name,
+      teacherId: data.teacher_id,
+      email: data.email,
+      subjects: data.subjects,
+      password: data.password
+    };
+  }
+
+  async updateTeacher(id: string, teacher: Omit<Teacher, 'id'>): Promise<void> {
+    const { error } = await supabase
+      .from('teachers')
+      .update({
+        name: teacher.name,
+        teacher_id: teacher.teacherId,
+        email: teacher.email,
+        subjects: teacher.subjects || [],
+        password: teacher.password || '123456'
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
+  async deleteTeacher(id: string): Promise<void> {
+    const { error } = await supabase.from('teachers').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getAllTeachers(): Promise<Teacher[]> {
+    const { data, error } = await supabase.from('teachers').select('*');
+    if (error) throw error;
+
+    // Map database fields to frontend format
+    return data.map(teacher => ({
+      id: teacher.id,
+      name: teacher.name,
+      teacherId: teacher.teacher_id,
+      email: teacher.email,
+      subjects: teacher.subjects,
+      password: teacher.password
+    }));
+  }
+
+  async getTeacherById(id: string): Promise<Teacher | null> {
+    const { data, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching teacher by ID:', error);
+      return null;
+    }
+
+    if (data) {
+      // Map database fields to frontend format
+      return {
+        id: data.id,
+        name: data.name,
+        teacherId: data.teacher_id,
+        email: data.email,
+        subjects: data.subjects,
+        password: data.password
+      };
+    }
+
+    return null;
+  }
+
   // Subject operations
-  getAllSubjects: () => getAll<Subject>(TABLES.SUBJECTS),
-  getSubjectById: (id: string) => getById<Subject>(TABLES.SUBJECTS, id),
-  createSubject: (subject: Omit<Subject, 'id'>) => create<Subject>(TABLES.SUBJECTS, subject),
-  updateSubject: (id: string, subject: Omit<Subject, 'id'>) => update<Subject>(TABLES.SUBJECTS, id, subject),
-  deleteSubject: (id: string) => remove(TABLES.SUBJECTS, id),
-  
+  async createSubject(subject: Omit<Subject, 'id'>): Promise<Subject> {
+    const { data, error } = await supabase
+      .from('subjects')
+      .insert(subject)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateSubject(id: string, subject: Omit<Subject, 'id'>): Promise<void> {
+    const { error } = await supabase.from('subjects').update(subject).eq('id', id);
+    if (error) throw error;
+  }
+
+  async deleteSubject(id: string): Promise<void> {
+    const { error } = await supabase.from('subjects').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getAllSubjects(): Promise<Subject[]> {
+    const { data, error } = await supabase.from('subjects').select('*');
+    if (error) throw error;
+    return data;
+  }
+
+  async getSubjectById(id: string): Promise<Subject | null> {
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching subject by ID:', error);
+      return null;
+    }
+
+    return data || null;
+  }
+
   // Schedule operations
-  getAllSchedules: () => getAll<Schedule>(TABLES.SCHEDULES),
-  getScheduleById: (id: string) => getById<Schedule>(TABLES.SCHEDULES, id),
-  createSchedule: (schedule: Omit<Schedule, 'id'>) => create<Schedule>(TABLES.SCHEDULES, schedule),
-  updateSchedule: (id: string, schedule: Omit<Schedule, 'id'>) => update<Schedule>(TABLES.SCHEDULES, id, schedule),
-  deleteSchedule: (id: string) => remove(TABLES.SCHEDULES, id),
-  
+  async createSchedule(schedule: Omit<Schedule, 'id'>): Promise<Schedule> {
+    const { data, error } = await supabase
+      .from('schedules')
+      .insert(schedule)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateSchedule(id: string, schedule: Omit<Schedule, 'id'>): Promise<void> {
+    const { error } = await supabase.from('schedules').update(schedule).eq('id', id);
+    if (error) throw error;
+  }
+
+  async deleteSchedule(id: string): Promise<void> {
+    const { error } = await supabase.from('schedules').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getAllSchedules(): Promise<Schedule[]> {
+    const { data, error } = await supabase.from('schedules').select('*');
+    if (error) throw error;
+    return data;
+  }
+
   // Attendance operations
-  getAllAttendances: () => getAll<Attendance>(TABLES.ATTENDANCES),
-  getAttendanceById: (id: string) => getById<Attendance>(TABLES.ATTENDANCES, id),
-  createAttendance: (attendance: Omit<Attendance, 'id'>) => create<Attendance>(TABLES.ATTENDANCES, attendance),
-  updateAttendance: (id: string, attendance: Omit<Attendance, 'id'>) => update<Attendance>(TABLES.ATTENDANCES, id, attendance),
-  deleteAttendance: (id: string) => remove(TABLES.ATTENDANCES, id),
-  
-  // Helper methods for attendance
-  getAttendancesBySchedule: async (scheduleId: string) => {
+  async createAttendance(attendance: Omit<Attendance, 'id'>): Promise<Attendance> {
     const { data, error } = await supabase
-      .from(TABLES.ATTENDANCES)
-      .select('*')
-      .eq('schedule_id', scheduleId);
-      
-    if (error) handleSupabaseError(error, 'fetching attendances by schedule');
-    return data || [];
-  },
-  
-  getAttendancesByStudent: async (studentId: string) => {
-    const { data, error } = await supabase
-      .from(TABLES.ATTENDANCES)
-      .select('*')
-      .eq('student_id', studentId);
-      
-    if (error) handleSupabaseError(error, 'fetching attendances by student');
-    return data || [];
-  },
-  
-  getAttendancesByDate: async (date: string) => {
-    const { data, error } = await supabase
-      .from(TABLES.ATTENDANCES)
-      .select('*')
-      .eq('date', date);
-      
-    if (error) handleSupabaseError(error, 'fetching attendances by date');
-    return data || [];
-  },
-  
-  // Report generation and export
-  getAttendanceReport: async (startDate: string, endDate: string, subjectId?: string, studentId?: string) => {
+      .from('attendances')
+      .insert(attendance)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getAttendanceReport(
+    startDate: string,
+    endDate: string,
+    subjectId?: string,
+    studentId?: string
+  ): Promise<Attendance[]> {
     let query = supabase
-      .from(TABLES.ATTENDANCES)
+      .from('attendances')
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate);
-    
+
     if (subjectId) {
       query = query.eq('subject_id', subjectId);
     }
-    
+
     if (studentId) {
       query = query.eq('student_id', studentId);
     }
-    
+
     const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching attendance report:', error);
+      throw error;
+    }
+
+    return data;
+  }
+
+  // User operations
+  async createUser(user: Omit<User, 'id'>): Promise<User> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        role: user.role,
+        role_id: user.roleId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
     
-    if (error) handleSupabaseError(error, 'generating attendance report');
-    return data || [];
-  },
-};
+    // Map database fields back to frontend format
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      role: data.role as 'admin' | 'teacher' | 'student',
+      roleId: data.role_id,
+      created_at: '', // You might need to fetch this from another table
+      updated_at: '', // You might need to fetch this from another table
+    };
+  }
+}
+
+export const dbService = new DatabaseService();

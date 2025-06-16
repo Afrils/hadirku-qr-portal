@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { dbService } from '@/services/dbService';
@@ -243,16 +242,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoading(true);
       console.log("Adding student:", student);
       
-      // Map frontend fields to database fields
-      const studentData = {
-        name: student.name,
-        student_id: student.studentId, // Map studentId to student_id
-        class: student.class,
-        email: student.email,
-        password: student.password || '123456'
-      };
-      
-      const newStudent = await dbService.createStudent(studentData);
+      // Create student using the passed data directly (already in correct format)
+      const newStudent = await dbService.createStudent(student);
       
       // Create user entry for the student
       await dbService.createUser({
@@ -260,16 +251,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         email: student.email,
         password: student.password || '123456',
         role: 'student',
-        role_id: newStudent.id
+        roleId: newStudent.id
       });
       
-      // Map database fields back to frontend format
-      const mappedStudent = {
-        ...newStudent,
-        studentId: newStudent.student_id // Map student_id back to studentId
-      };
-      
-      setStudents(prevStudents => [...prevStudents, mappedStudent]);
+      setStudents(prevStudents => [...prevStudents, newStudent]);
       toast.success('Siswa berhasil ditambahkan');
     } catch (error) {
       console.error('Failed to add student:', error);
@@ -283,16 +268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setIsLoading(true);
       
-      // Map frontend fields to database fields
-      const studentData = {
-        name: student.name,
-        student_id: student.studentId, // Map studentId to student_id
-        class: student.class,
-        email: student.email,
-        password: student.password || '123456'
-      };
-      
-      await dbService.updateStudent(id, studentData);
+      await dbService.updateStudent(id, student);
       setStudents(prevStudents =>
         prevStudents.map(s => (s.id === id ? { ...s, ...student } : s))
       );
@@ -325,16 +301,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoading(true);
       console.log("Adding teacher:", teacher);
       
-      // Map frontend fields to database fields
-      const teacherData = {
-        name: teacher.name,
-        teacher_id: teacher.teacherId, // Map teacherId to teacher_id
-        email: teacher.email,
-        subjects: teacher.subjects || [],
-        password: teacher.password || '123456'
-      };
-      
-      const newTeacher = await dbService.createTeacher(teacherData);
+      // Create teacher using the passed data directly (already in correct format)
+      const newTeacher = await dbService.createTeacher(teacher);
       
       // Create user entry for the teacher
       await dbService.createUser({
@@ -342,16 +310,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         email: teacher.email,
         password: teacher.password || '123456',
         role: 'teacher',
-        role_id: newTeacher.id
+        roleId: newTeacher.id
       });
       
-      // Map database fields back to frontend format
-      const mappedTeacher = {
-        ...newTeacher,
-        teacherId: newTeacher.teacher_id // Map teacher_id back to teacherId
-      };
-      
-      setTeachers(prevTeachers => [...prevTeachers, mappedTeacher]);
+      setTeachers(prevTeachers => [...prevTeachers, newTeacher]);
       toast.success('Guru berhasil ditambahkan');
     } catch (error) {
       console.error('Failed to add teacher:', error);
@@ -365,16 +327,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setIsLoading(true);
       
-      // Map frontend fields to database fields
-      const teacherData = {
-        name: teacher.name,
-        teacher_id: teacher.teacherId, // Map teacherId to teacher_id
-        email: teacher.email,
-        subjects: teacher.subjects || [],
-        password: teacher.password || '123456'
-      };
-      
-      await dbService.updateTeacher(id, teacherData);
+      await dbService.updateTeacher(id, teacher);
       setTeachers(prevTeachers =>
         prevTeachers.map(t => (t.id === id ? { ...t, ...teacher } : t))
       );

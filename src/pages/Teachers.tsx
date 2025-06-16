@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,11 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
-import { Pencil, Trash, Loader2, Database } from 'lucide-react';
+import { Pencil, Trash, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 const Teachers = () => {
-  const { teachers, addTeacher, updateTeacher, deleteTeacher, addDummyData, isLoading } = useAppContext();
+  const { teachers, addTeacher, updateTeacher, deleteTeacher, isLoading } = useAppContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -107,18 +106,7 @@ const Teachers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Manajemen Guru</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={addDummyData}
-            className="flex items-center gap-2"
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-            Tambah Data Dummy
-          </Button>
-          <Button onClick={() => handleOpenDialog()}>Tambah Guru</Button>
-        </div>
+        <Button onClick={() => handleOpenDialog()}>Tambah Guru</Button>
       </div>
 
       <div className="flex items-center mb-4">
